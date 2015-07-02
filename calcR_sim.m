@@ -1,10 +1,10 @@
-d = dir('*merged.mat');
+d = dir('*toGLM.mat');
 for ddd = 1:length(d)
     clearvars -except d ddd
     saveFlag = 1;
-    d = dir('*merged.mat');
+    d = dir('*toGLM.mat');
     ca
-    fname = [d(ddd).name(1:end-11) '_simGLM'];
+    fname = [d(ddd).name(1:end-10) '_simGLM'];
     load(d(ddd).name)
     if size(mech_85,2)>size(mech_85,1)
         mech_85 = mech_85';

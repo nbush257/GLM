@@ -2,7 +2,7 @@ function [history,lambda] = simGLM4(x,historyFilter,numReplicates)
 % input is an 'indentity' link function'
 historyFilter = flipud(historyFilter);
 historyFilter = repmat(historyFilter,1,numReplicates);
-plotTGL =1;
+plotTGL =0;
 xR = repmat(x,1,numReplicates);
 lambda = zeros(length(x),numReplicates);
 history = zeros(length(x),numReplicates);
@@ -17,3 +17,9 @@ for ii = 2:length(x)
     history(ii,:) = binornd(1,lambda(ii),1,numReplicates);
 end
 
+if plotTGL
+    figure
+    for ii = 1:numReplicates
+        plot(find(spikeOut(:,ii)==1),ones(size(find(spikeOut(:,ii)==1)))*ii,'k.');ho;
+    end
+end

@@ -290,11 +290,12 @@ end
 cpredmat = cell(nfolds,1);
 
 if (parallel == true)
-    offpar = 0;
-    if matlabpool('size') <= 0
-        offpar = 1;
-        matlabpool;
-    end
+    gcp;% Edited by NB 2015_07_02 to update the parallel bits with the new matlab standard
+    offpar = 1;
+%     if matlabpool('size') <= 0
+%         offpar = 1;
+%         matlabpool;
+%     end
     
     parfor i = 1: nfolds
         which = foldid==i;
@@ -307,10 +308,10 @@ if (parallel == true)
         xr = x(~which,:); yr = y(~which,:);
         cpredmat{i} = glmnet(xr, yr, family, opts);
     end
-    
-    if (offpar)
-        matlabpool close;
-    end    
+%     NB Preventing the parallel from closing
+%     if (offpar)
+%         matlabpool close;
+%     end    
 else   
     for i = 1: nfolds        
         which = foldid==i;
