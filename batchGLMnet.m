@@ -6,9 +6,9 @@ for ddd = 1:length(d)
     noProx = 1;
     saveTGL =1;
     d = dir('*toGLM.mat');
-    filtSize = 25;
+    filtSize = 50;
     basisSize = 4;
-    rateBin = 50;
+    rateBin = 25;
     histSize = 5;
     d = dir('*toGLM.mat');
     ca
@@ -147,9 +147,9 @@ for ddd = 1:length(d)
         YB(k==ii) = glmval(wB,XB(k==ii,:),'identity');
         %% sim trials
     end
-    histM = mean(allHistM,2);
-    histG = mean(allHistG,2);
-    histB = mean(allHistB,2);
+    histM = mean(allHistM,2);hM = histM(1:histSize);
+    histG = mean(allHistG,2);hG = histG(1:histSize);
+    histB = mean(allHistB,2);hB = histB(1:histSize);
     
     mechOut = simGLM4(YM,histM(1:histSize),500);
     geoOut = simGLM4(YG,histG(1:histSize),500);
@@ -164,8 +164,8 @@ for ddd = 1:length(d)
     %% get correlations
     rG = corr(geoRate,rate);
     rM = corr(mechRate,rate);
-    rB = corr(mechRate,rate);
-    if exist('med','var') & all(k==numK+1)
+    rB = corr(bothRate,rate);
+    if exist('med','var')
         
         rM_dis = corr(mechRate(newDis),rate(newDis));
         rM_med = corr(mechRate(newMed),rate(newMed));
@@ -204,7 +204,7 @@ for ddd = 1:length(d)
     
     subplot(313)
     plot(bothRate);ho;plot(rate);legend({'Predicted','Actual'});
-    title(['Both: Pearson Correlation Coefficent = ' num2str(rM)])
+    title(['Both: Pearson Correlation Coefficent = ' num2str(rB)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
     
