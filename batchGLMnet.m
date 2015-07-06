@@ -102,15 +102,18 @@ for ddd = 1:length(d)
     %% fit GLM
     numK=5;
     k = crossvalind('Kfold',length(newSpikes),numK);
+    %     k = kfoldWhisk(newC,numK,filtSize);
+    
     [XM,dmM] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
     [XG,dmG] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
     [XMh,dmMh] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
     [XGh,dmGh] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
     [XB,dmB] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
     [XBh,dmBh] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
-
-
-    for ii = 1:numK+1
+    YM = zeros(size(newC));
+    YB = zeros(size(newC));
+    YG = zeros(size(newC));
+    for ii = 1:numK
         ii
         if ii>numK
             
@@ -131,71 +134,59 @@ for ddd = 1:length(d)
         histG = buildGLM.combineWeights(dmGh,wGh(2:end));histG = histG.hist.data;
         histB = buildGLM.combineWeights(dmBh,wBh(2:end));histB = histB.hist.data;
         
+        allHistM(:,ii) = histM;
+        allHistG(:,ii) = histG;
+        allHistB(:,ii) = histB;
         
         weightM = buildGLM.combineWeights(dmM,wM(2:end));
         weightG = buildGLM.combineWeights(dmG,wG(2:end));
         weightB = buildGLM.combineWeights(dmB,wB(2:end));
         
-        YM = glmval(wM,XM(k==ii,:),'identity');
-        YG = glmval(wG,XG(k==ii,:),'identity');
-        YB = glmval(wB,XB(k==ii,:),'identity');
+        YM(k==ii) = glmval(wM,XM(k==ii,:),'identity');
+        YG(k==ii) = glmval(wG,XG(k==ii,:),'identity');
+        YB(k==ii) = glmval(wB,XB(k==ii,:),'identity');
         %% sim trials
-        
-        mechOut = simGLM4(YM,histM(1:histSize),500);
-        geoOut = simGLM4(YG,histG(1:histSize),500);
-        bothOut = simGLM4(YB,histB(1:histSize),500);
-        
-        mechRate = tsmovavg(mechOut','s',rateBin);mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
-        geoRate = tsmovavg(geoOut','s',rateBin);geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
-        bothRate = tsmovavg(bothOut','s',rateBin);bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
-        rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
-        rate = rate(k==ii);
-        
-        
-        hM = histM(1:histSize);
-        hG = histG(1:histSize);
-        hB = histB(1:histSize);
-        
-        %% get correlations
-        rG(ii) = corr(geoRate,rate);
-        rM(ii) = corr(mechRate,rate);
-        rB(ii) = corr(mechRate,rate);
-        if exist('med','var') & all(k==numK+1)
-            
-            rM_dis = corr(mechRate(newDis),rate(newDis));
-            rM_med = corr(mechRate(newMed),rate(newMed));
-            
-            rG_dis = corr(geoRate(newDis),rate(newDis));
-            rG_med = corr(geoRate(newMed),rate(newMed));
-            
-            rB_dis = corr(bothRate(newDis),rate(newDis));
-            rB_med = corr(bothRate(newMed),rate(newMed));
-            
-            if ~noProx
-                rG_prox = corr(geoRate(newProx),rate(newProx));
-                rM_prox = corr(mechRate(newProx),rate(newProx));
-                rB_prox = corr(bothRate(newProx),rate(newProx));
-            end
-        end
-        
-        allWMH{ii} = wMh;
-        allWM{ii} = wM;
-        allWGH{ii} = wGh;
-        allWG{ii} = wG;
-        allWBH{ii} = wBh;
-        allWB{ii} = wB;
     end
-    rG = rG(end);
-    rM = rM(end);
-    rB = rB(end);
+    histM = mean(allHistM,2);
+    histG = mean(allHistG,2);
+    histB = mean(allHistB,2);
     
+    mechOut = simGLM4(YM,histM(1:histSize),500);
+    geoOut = simGLM4(YG,histG(1:histSize),500);
+    bothOut = simGLM4(YB,histB(1:histSize),500);
+    
+    mechRate = tsmovavg(mechOut','s',rateBin);mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
+    geoRate = tsmovavg(geoOut','s',rateBin);geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
+    bothRate = tsmovavg(bothOut','s',rateBin);bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
+    rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
+    
+    
+    %% get correlations
+    rG = corr(geoRate,rate);
+    rM = corr(mechRate,rate);
+    rB = corr(mechRate,rate);
+    if exist('med','var') & all(k==numK+1)
+        
+        rM_dis = corr(mechRate(newDis),rate(newDis));
+        rM_med = corr(mechRate(newMed),rate(newMed));
+        
+        rG_dis = corr(geoRate(newDis),rate(newDis));
+        rG_med = corr(geoRate(newMed),rate(newMed));
+        
+        rB_dis = corr(bothRate(newDis),rate(newDis));
+        rB_med = corr(bothRate(newMed),rate(newMed));
+        
+        if ~noProx
+            rG_prox = corr(geoRate(newProx),rate(newProx));
+            rM_prox = corr(mechRate(newProx),rate(newProx));
+            rB_prox = corr(bothRate(newProx),rate(newProx));
+        end
+    end
+            
     weightM = buildGLM.combineWeights(dmM,wM(2:end));
     weightG = buildGLM.combineWeights(dmG,wG(2:end));
     weightB = buildGLM.combineWeights(dmB,wB(2:end));
     
-    histM = buildGLM.combineWeights(dmMh,wMh(2:end));histM = histM.hist.data;
-    histG = buildGLM.combineWeights(dmGh,wGh(2:end));histG = histG.hist.data;
-    histB = buildGLM.combineWeights(dmBh,wBh(2:end));histB = histB.hist.data;
     
     %% plot
     f1 = figure;
@@ -294,6 +285,7 @@ for ddd = 1:length(d)
     
     
 end
+
 
 
 
