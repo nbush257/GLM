@@ -1,19 +1,29 @@
 d = dir('*toGLM.mat');
 for ddd = 1:length(d)
     %% load and clean data
-    clearvars -except d ddd
+    clearvars -except d ddd cellType
     preRate = 0;
     noProx = 1;
     saveTGL =1;
     d = dir('*toGLM.mat');
-    filtSize = 50;
-    basisSize = 4;
-    rateBin = 25;
+    filtSize = 5;
+    basisSize = 1;
+    rateBin = 5;
     histSize = 5;
     d = dir('*toGLM.mat');
     ca
-    fname = [d(ddd).name(1:end-10) '_simGLM'];
-    load(d(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
+    fname = [d(ddd).name(1:end-10) '_simGLM_smallFilt'];
+    try
+        load(cellType(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
+    catch
+        warning('FIle not found')
+        pause
+        continue
+    end
+    
+    if cellType(ddd).type == 1
+        histSize = 5;
+    end
     if size(mech_85,2)>size(mech_85,1)
         mech_85 = mech_85';
         geo_85 = geo_85';
@@ -182,7 +192,7 @@ for ddd = 1:length(d)
             rB_prox = corr(bothRate(newProx),rate(newProx));
         end
     end
-            
+    
     
     %% plot
     f1 = figure;
@@ -225,21 +235,21 @@ for ddd = 1:length(d)
             cd ..
         end
     end
-%     
-%     f3 = figure;
-%     subplot(231)
-%     plot(weightG.X.data);title('Geometry Filter');legend({'R','\Theta Push'});
-%     subplot(232)
-%     plot(weightG.derivative.data);title('Geometry Time Derivative Filter');legend({'R-dot','\Theta Push-dot'});
-%     subplot(233)
-%     plot(hG); title('Geometry Spike Filter')
-%     
-%     subplot(234)
-%     plot(weightM.X.data);title('Mechanics Filter');legend({'FX','FY','M'});
-%     subplot(235)
-%     plot(weightM.derivative.data);title('Mechanics Time Derivative Filter');legend({'FX-dot','FY-dot','M-dot'});
-%     subplot(236)
-%     plot(hM);title('Mechanics spike history');
+    %
+    %     f3 = figure;
+    %     subplot(231)
+    %     plot(weightG.X.data);title('Geometry Filter');legend({'R','\Theta Push'});
+    %     subplot(232)
+    %     plot(weightG.derivative.data);title('Geometry Time Derivative Filter');legend({'R-dot','\Theta Push-dot'});
+    %     subplot(233)
+    %     plot(hG); title('Geometry Spike Filter')
+    %
+    %     subplot(234)
+    %     plot(weightM.X.data);title('Mechanics Filter');legend({'FX','FY','M'});
+    %     subplot(235)
+    %     plot(weightM.derivative.data);title('Mechanics Time Derivative Filter');legend({'FX-dot','FY-dot','M-dot'});
+    %     subplot(236)
+    %     plot(hM);title('Mechanics spike history');
     
     if exist('med','var')
         
@@ -270,7 +280,7 @@ for ddd = 1:length(d)
         cd done_noProx
         save([fname '.mat']);
         hgsave(f1,[fname '_responses.fig']);
-%        hgsave(f3,[fname '_filters.fig']);
+        %        hgsave(f3,[fname '_filters.fig']);
         cd ..
         ca
         pause(.01)
