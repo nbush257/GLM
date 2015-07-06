@@ -3,13 +3,13 @@ for ddd = 1:length(d)
     %% load and clean data
     clearvars -except d ddd
     preRate = 0;
-    noProx = 0;
+    noProx = 1;
     saveTGL =1;
     d = dir('*toGLM.mat');
     filtSize = 25;
     basisSize = 4;
-    rateBin = 15;
-    histSize = 15;
+    rateBin = 50;
+    histSize = 5;
     d = dir('*toGLM.mat');
     ca
     fname = [d(ddd).name(1:end-10) '_simGLM'];
@@ -100,62 +100,81 @@ for ddd = 1:length(d)
     end
     
     %% fit GLM
-    
-    k = crossvalind('Kfold',length(newSpikes),5);
+    numK=5;
+    k = crossvalind('Kfold',length(newSpikes),numK);
     [XM,dmM] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
     [XG,dmG] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
     [XMh,dmMh] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
     [XGh,dmGh] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
+    [XB,dmB] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
+    [XBh,dmBh] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
 
-    for ii = 1:max(k)+1
+
+    for ii = 1:numK+1
         ii
-        if ii>max(k)
+        if ii>numK
             
             [~,keepG] = max(rG);wG = allWG{keepG};wGh = allWGH{keepG};
+            [~,keepB] = max(rB);wB = allWB{keepB};wBh = allWBH{keepB};
             [~,keepM] = max(rM);wM = allWM{keepM};wMh = allWMH{keepM};
             k = ones(size(newSpikes))*ii;
         else
             wMh = glmfit(XMh(k~=ii,:),newSpikes(k~=ii),'binomial');
+            wBh = glmfit(XBh(k~=ii,:),newSpikes(k~=ii),'binomial');
             wM = glmfit(XM(k~=ii,:),newSpikes(k~=ii),'binomial');
             wG =glmfit(XG(k~=ii,:),newSpikes(k~=ii),'binomial');
+            wB =glmfit(XB(k~=ii,:),newSpikes(k~=ii),'binomial');
             wGh = glmfit(XGh(k~=ii,:),newSpikes(k~=ii),'binomial');
             
         end
         histM = buildGLM.combineWeights(dmMh,wMh(2:end));histM = histM.hist.data;
         histG = buildGLM.combineWeights(dmGh,wGh(2:end));histG = histG.hist.data;
+        histB = buildGLM.combineWeights(dmBh,wBh(2:end));histB = histB.hist.data;
+        
         
         weightM = buildGLM.combineWeights(dmM,wM(2:end));
         weightG = buildGLM.combineWeights(dmG,wG(2:end));
+        weightB = buildGLM.combineWeights(dmB,wB(2:end));
         
         YM = glmval(wM,XM(k==ii,:),'identity');
         YG = glmval(wG,XG(k==ii,:),'identity');
+        YB = glmval(wB,XB(k==ii,:),'identity');
         %% sim trials
         
         mechOut = simGLM4(YM,histM(1:histSize),500);
         geoOut = simGLM4(YG,histG(1:histSize),500);
+        bothOut = simGLM4(YB,histB(1:histSize),500);
         
         mechRate = tsmovavg(mechOut','s',rateBin);mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
         geoRate = tsmovavg(geoOut','s',rateBin);geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
+        bothRate = tsmovavg(bothOut','s',rateBin);bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
         rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
         rate = rate(k==ii);
         
         
         hM = histM(1:histSize);
         hG = histG(1:histSize);
+        hB = histB(1:histSize);
         
         %% get correlations
         rG(ii) = corr(geoRate,rate);
         rM(ii) = corr(mechRate,rate);
-        if exist('med','var')
+        rB(ii) = corr(mechRate,rate);
+        if exist('med','var') & all(k==numK+1)
             
             rM_dis = corr(mechRate(newDis),rate(newDis));
             rM_med = corr(mechRate(newMed),rate(newMed));
             
             rG_dis = corr(geoRate(newDis),rate(newDis));
             rG_med = corr(geoRate(newMed),rate(newMed));
+            
+            rB_dis = corr(bothRate(newDis),rate(newDis));
+            rB_med = corr(bothRate(newMed),rate(newMed));
+            
             if ~noProx
                 rG_prox = corr(geoRate(newProx),rate(newProx));
                 rM_prox = corr(mechRate(newProx),rate(newProx));
+                rB_prox = corr(bothRate(newProx),rate(newProx));
             end
         end
         
@@ -163,28 +182,41 @@ for ddd = 1:length(d)
         allWM{ii} = wM;
         allWGH{ii} = wGh;
         allWG{ii} = wG;
+        allWBH{ii} = wBh;
+        allWB{ii} = wB;
     end
     rG = rG(end);
     rM = rM(end);
+    rB = rB(end);
+    
     weightM = buildGLM.combineWeights(dmM,wM(2:end));
     weightG = buildGLM.combineWeights(dmG,wG(2:end));
+    weightB = buildGLM.combineWeights(dmB,wB(2:end));
     
     histM = buildGLM.combineWeights(dmMh,wMh(2:end));histM = histM.hist.data;
     histG = buildGLM.combineWeights(dmGh,wGh(2:end));histG = histG.hist.data;
+    histB = buildGLM.combineWeights(dmBh,wBh(2:end));histB = histB.hist.data;
     
     %% plot
     f1 = figure;
-    subplot(211)
+    subplot(311)
     plot(geoRate);ho;plot(rate);legend({'Predicted','Actual'});
     title(['Geometry: Pearson Correlation Coefficent = ' num2str(rG)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
-    subplot(212)
+    subplot(312)
     
     plot(mechRate);ho;plot(rate);legend({'Predicted','Actual'});
     title(['Mechanics: Pearson Correlation Coefficent = ' num2str(rM)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
+    
+    subplot(313)
+    plot(bothRate);ho;plot(rate);legend({'Predicted','Actual'});
+    title(['Both: Pearson Correlation Coefficent = ' num2str(rM)])
+    xlabel('time (ms)')
+    ylabel('Spike Rate')
+    
     
     
     if preRate
@@ -242,13 +274,13 @@ for ddd = 1:length(d)
         subplot(236)
         plot(mechRate(find(newDis)));ho; plot(rate(find(newDis)));title(['Mechanics Distal, R = ' num2str(rM_dis)])
         if saveTGL
-            cd done\
+            cd done_noProx\
             hgsave(f4,[fname '_radialDistances.fig'])
             cd ..
         end
     end
     if saveTGL
-        cd done\
+        cd done_noProx
         save([fname '.mat']);
         hgsave(f1,[fname '_responses.fig']);
         hgsave(f3,[fname '_filters.fig']);
