@@ -50,7 +50,7 @@ ax.XTick=[0 1];
 legend([pdG pdM]);
 axy(0,1)
 title('Preferred Direction')
-%%
-saveas(f1,'awakeVanaesthetized.fig','fig')
-saveas(f2,'medVdis.fig','fig')
-saveas(f3,'PD.fig','fig')
+% %%
+% saveas(f1,'awakeVanaesthetized.fig','fig')
+% saveas(f2,'medVdis.fig','fig')
+% saveas(f3,'PD.fig','fig')

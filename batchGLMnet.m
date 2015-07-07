@@ -14,16 +14,16 @@ for ddd = 1:length(d)
     ca
     fname = [d(ddd).name(1:end-10) '_simGLM_smallFilt'];
     try
-        load(cellType(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
+        load(d(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
     catch
         warning('FIle not found')
         pause
         continue
     end
-    
-    if cellType(ddd).type == 1
-        histSize = 5;
-    end
+%     
+%     if cellType(ddd).type == 1
+%         histSize = 5;
+%     end
     if size(mech_85,2)>size(mech_85,1)
         mech_85 = mech_85';
         geo_85 = geo_85';
@@ -271,13 +271,13 @@ for ddd = 1:length(d)
         subplot(236)
         plot(mechRate(find(newDis)));ho; plot(rate(find(newDis)));title(['Mechanics Distal, R = ' num2str(rM_dis)])
         if saveTGL
-            cd done_noProx\
+            cd smallFilt\
             hgsave(f4,[fname '_radialDistances.fig'])
             cd ..
         end
     end
     if saveTGL
-        cd done_noProx
+        cd smallFilt
         save([fname '.mat']);
         hgsave(f1,[fname '_responses.fig']);
         %        hgsave(f3,[fname '_filters.fig']);
