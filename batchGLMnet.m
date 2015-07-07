@@ -63,7 +63,8 @@ for ddd = 1:length(d)
             newDis = logical(newDis);newMed = logical(newMed);newProx = logical(newMed);
         end
     end
-    
+    newMech = zscore(newMech);
+    newGeo = zscore(newGeo);
     
     if sum(newSpikes)<20
         warning('Not enough spikes found in the region of interest. Aborting.')
