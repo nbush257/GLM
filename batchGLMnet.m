@@ -4,11 +4,11 @@ for ddd = 1:length(d)
     clearvars -except d ddd cellType
     preRate = 0;
     noProx = 1;
-    saveTGL =1;
+    saveTGL =0;
     d = dir('*toGLM.mat');
-    filtSize = 5;
-    basisSize = 1;
-    rateBin = 5;
+    filtSize = 25;
+    basisSize = 4;
+    rateBin = 25;
     histSize = 5;
     d = dir('*toGLM.mat');
     ca
@@ -165,11 +165,18 @@ for ddd = 1:length(d)
     geoOut = simGLM4(YG,histG(1:histSize),500);
     bothOut = simGLM4(YB,histB(1:histSize),500);
     
-    mechRate = tsmovavg(mechOut','s',rateBin);mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
-    geoRate = tsmovavg(geoOut','s',rateBin);geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
-    bothRate = tsmovavg(bothOut','s',rateBin);bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
-    rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
+    mechRate = tsmovavg(mechOut','s',rateBin);
+    mechSE = nanstd(mechRate)./sqrt(size(mechRate,1));
+    mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
     
+    geoRate = tsmovavg(geoOut','s',rateBin);
+    geoSE = nanstd(geoRate)./sqrt(size(geoRate,1));
+    geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
+   
+    bothRate = tsmovavg(bothOut','s',rateBin);
+    bothSE = nanstd(bothRate)./sqrt(size(bothRate,1));
+    bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
+    rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
     
     %% get correlations
     rG = corr(geoRate,rate);
