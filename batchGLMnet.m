@@ -1,18 +1,19 @@
 d = dir('*toGLM.mat');
 for ddd = 1:length(d)
     %% load and clean data
+    ca
     clearvars -except d ddd cellType
     preRate = 0;
     noProx = 1;
-    saveTGL =0;
+    saveTGL =1;
     d = dir('*toGLM.mat');
-    filtSize = 25;
+    filtSize = 50;
     basisSize = 4;
     rateBin = 25;
     histSize = 5;
     d = dir('*toGLM.mat');
     ca
-    fname = [d(ddd).name(1:end-10) '_simGLM_smallFilt'];
+    fname = [d(ddd).name(1:end-10) '_simGLM_norm'];
     try
         load(d(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
     catch
@@ -166,17 +167,17 @@ for ddd = 1:length(d)
     geoOut = simGLM4(YG,histG(1:histSize),500);
     bothOut = simGLM4(YB,histB(1:histSize),500);
     
-    mechRate = tsmovavg(mechOut','s',rateBin);
-    mechSE = nanstd(mechRate)./sqrt(size(mechRate,1));
-    mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
+    mechRate = tsmovavg(mechOut','s',rateBin);mechRate= mechRate*1000;
+    mechSE = nanstd(mechRate);
+    mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;
     
-    geoRate = tsmovavg(geoOut','s',rateBin);
-    geoSE = nanstd(geoRate)./sqrt(size(geoRate,1));
-    geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
+    geoRate = tsmovavg(geoOut','s',rateBin);geoRate = geoRate*1000;
+    geoSE = nanstd(geoRate);
+    geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;
    
-    bothRate = tsmovavg(bothOut','s',rateBin);
-    bothSE = nanstd(bothRate)./sqrt(size(bothRate,1));
-    bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
+    bothRate = tsmovavg(bothOut','s',rateBin);bothRate = bothRate*1000;
+    bothSE = nanstd(bothRate);
+    bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;
     rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
     
     %% get correlations
@@ -205,19 +206,19 @@ for ddd = 1:length(d)
     %% plot
     f1 = figure;
     subplot(311)
-    plot(geoRate);ho;plot(rate);legend({'Predicted','Actual'});
+    shadedErrorBar(1:length(rate),geoRate,geoSE);ho; plot(geoRate);ho;plot(rate);legend({'Predicted','Actual'});
     title(['Geometry: Pearson Correlation Coefficent = ' num2str(rG)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
     subplot(312)
     
-    plot(mechRate);ho;plot(rate);legend({'Predicted','Actual'});
+    shadedErrorBar(1:length(mechRate),mechRate,mechSE);ho;plot(rate);legend({'Predicted','Actual'});
     title(['Mechanics: Pearson Correlation Coefficent = ' num2str(rM)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
     
     subplot(313)
-    plot(bothRate);ho;plot(rate);legend({'Predicted','Actual'});
+    shadedErrorBar(1:length(bothRate),bothRate,bothSE);ho;plot(rate);legend({'Predicted','Actual'});
     title(['Both: Pearson Correlation Coefficent = ' num2str(rB)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
@@ -263,34 +264,33 @@ for ddd = 1:length(d)
         
         f4 = figure;
         subplot(232)
-        plot(geoRate(find(newMed)));ho; plot(rate(find(newMed)));title(['Geometry Medial, R = ' num2str(rG_med)])
+        shadedErrorBar(1:length(geoRate(find(newMed))),geoRate(find(newMed)),geoSE(find(newMed)));ho; plot(rate(find(newMed)));title(['Geometry Medial, R = ' num2str(rG_med)])
         subplot(233)
-        plot(geoRate(find(newDis)));ho; plot(rate(find(newDis)));title(['Geometry Distal, R = ' num2str(rG_dis)])
+        shadedErrorBar(1:length(geoRate(find(newDis))),geoRate(find(newDis)),geoSE(find(newDis)));ho; plot(rate(find(newDis)));title(['Geometry Distal, R = ' num2str(rG_dis)])
         if ~noProx
             
             subplot(231)
-            plot(geoRate(find(newProx)));ho; plot(rate(find(newProx)));title(['Geometry Proximal, R = ' num2str(rG_prox)])
+            shadedErrorBar(1:length(geoRate(find(newProx))),geoRate(find(newProx)),geoSE(find(newProx)));ho; plot(rate(find(newProx)));title(['Geometry Proximal, R = ' num2str(rG_prox)])
             subplot(234)
-            plot(mechRate(find(newProx)));ho; plot(rate(find(newProx)));title(['Mechanical Prox, R = ' num2str(rM_prox)])
+            shadedErrorBar(1:length(mechRate(find(newProx))),mechRate(find(newProx)),mechSE(find(newProx)));ho; plot(rate(find(newProx)));title(['Mechanical Prox, R = ' num2str(rM_prox)])
             
         end
         subplot(235)
-        plot(mechRate(find(newMed)));ho; plot(rate(find(newMed)));title(['Mechanics Medial, R = ' num2str(rM_med)])
+        shadedErrorBar(1:length(mechRate(find(newMed))),mechRate(find(newMed)),mechSE(find(newMed)));ho; plot(rate(find(newMed)));title(['Mechanics Medial, R = ' num2str(rM_med)])
         subplot(236)
-        plot(mechRate(find(newDis)));ho; plot(rate(find(newDis)));title(['Mechanics Distal, R = ' num2str(rM_dis)])
+        shadedErrorBar(1:length(mechRate(find(newDis))),mechRate(find(newDis)),mechSE(find(newDis)));ho; plot(rate(find(newDis)));title(['Mechanics Distal, R = ' num2str(rM_dis)])
         if saveTGL
-            cd smallFilt\
+            cd done_Norm\
             hgsave(f4,[fname '_radialDistances.fig'])
             cd ..
         end
     end
     if saveTGL
-        cd smallFilt
+        cd done_Norm\
         save([fname '.mat']);
         hgsave(f1,[fname '_responses.fig']);
         %        hgsave(f3,[fname '_filters.fig']);
         cd ..
-        ca
         pause(.01)
     else
         pause
