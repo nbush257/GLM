@@ -3,17 +3,17 @@ for ddd = 1:length(d)
     %% load and clean data
     ca
     clearvars -except d ddd cellType
-    preRate = 0;
-    noProx = 1;
-    saveTGL =1;
-    d = dir('*toGLM.mat');
-    filtSize = 50;
-    basisSize = 4;
-    rateBin = 25;
-    histSize = 5;
+    preRate = 0; % 1 if you want to calculate the rate as the predictor before fitting the GLM. Not well tested
+    noProx = 1;% 1 if you want to omit proximal deflections. 
+    saveTGL =1;% 1 if you want to save the outputs
+    d = dir('*toGLM.mat');% get the files in the directory that match the pathspec
+    filtSize = 50;% # of ms in the past to look
+    basisSize = 4;% # of functions to use to define the cosine basis
+    rateBin = 25;% size of window to bin the rates at
+    histSize = 5;% number of ms in the past to consider the spike history
     d = dir('*toGLM.mat');
     ca
-    fname = [d(ddd).name(1:end-10) '_simGLM_norm'];
+    fname = [d(ddd).name(1:end-10) '_simGLM_norm'];% output filename -no suffix
     try
         load(d(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
     catch
@@ -21,10 +21,13 @@ for ddd = 1:length(d)
         pause
         continue
     end
-%     
+%     Enable this if you want to do something special for RA cells
 %     if cellType(ddd).type == 1
 %         histSize = 5;
 %     end
+
+% make sure the variables are in the proper orientation ( Time along the
+% first dimension
     if size(mech_85,2)>size(mech_85,1)
         mech_85 = mech_85';
         geo_85 = geo_85';
@@ -33,7 +36,7 @@ for ddd = 1:length(d)
     if ~exist('prox','var')
         prox = zeros(size(C));
     end
-    
+    % make sure time and spikes are column vectors
     if isrow(spikevec);spikevec = spikevec'; end;
     if isrow(C);C = C'; end;
     
@@ -43,14 +46,21 @@ for ddd = 1:length(d)
         if isrow(dis);dis = dis';end
         if isrow(prox);prox = prox';end
     end
+    
+    % ignore all proximal contacts
     if noProx
         C(prox==1)=0;
     end
+    % interpolate over nans.
     mech_85(1,:) = 0;mech_85(end,:) = 0; mech_85 = naninterp(mech_85);
     geo_85(1,:) = 0;geo_85(end,:) = 0; geo_85 = naninterp(geo_85);
-    C(1) = 0;C(end)=0;
+    
+    % find indices of contact periods
+    C(1) = 0;C(end)=0; % ensures at least one contact period and that the number of stops = the number of starts
     starts = find(diff(C)==1)+1;
     stops = find(diff(C)==-1);
+    % create new variables that consist only of the time of contact + a pad
+    % 5 ms longer than the size of the input filter.
     newMech = [];newGeo = [];newC = [];newSpikes = [];newDis = [];newMed = [];newProx = [];
     for ii = 1:length(starts)
         newMech = [newMech;zeros(filtSize+5,3);mech_85(starts(ii):stops(ii),:);zeros(filtSize+5,3)];
@@ -64,14 +74,17 @@ for ddd = 1:length(d)
             newDis = logical(newDis);newMed = logical(newMed);newProx = logical(newMed);
         end
     end
+    % Scale the input vectors
     newMech = zscore(newMech);
     newGeo = zscore(newGeo);
     
+    % Short circuit if there are too few spikes
     if sum(newSpikes)<20
         warning('Not enough spikes found in the region of interest. Aborting.')
         continue
     end
     %% calculate rate pre GLM
+    % This is not well implemented
     if preRate
         rate = tsmovavg(newSpikes','s',rateBin)*rateBin;rate = rate';
         rateMech = tsmovavg(newMech','s',rateBin);rateMech = rateMech';
@@ -112,28 +125,32 @@ for ddd = 1:length(d)
     end
     
     %% fit GLM
+    % prepare the cross validation
     numK=5;
     k = crossvalind('Kfold',length(newSpikes),numK);
     %     k = kfoldWhisk(newC,numK,filtSize);
     
-    [XM,dmM] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
-    [XG,dmG] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
-    [XMh,dmMh] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
-    [XGh,dmGh] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
-    [XB,dmB] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);
-    [XBh,dmBh] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);
+    % Apply the filters and set up the dsign matrices. Uses Pillow's glm
+    % code
+    [XM,dmM] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);% mechanics
+    [XG,dmG] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);% Geo
+    [XMh,dmMh] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);% Mech spike history
+    [XGh,dmGh] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);% Geo spike history
+    [XB,dmB] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);% Both
+    [XBh,dmBh] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);% Both spike history
+    % initialize the GLMval output.
     YM = zeros(size(newC));
     YB = zeros(size(newC));
     YG = zeros(size(newC));
-    for ii = 1:numK
+    
+    for ii = 1:numK % Crossvalidation fitting
         ii
-        if ii>numK
-            
+        if ii>numK % should be depricated. 
             [~,keepG] = max(rG);wG = allWG{keepG};wGh = allWGH{keepG};
             [~,keepB] = max(rB);wB = allWB{keepB};wBh = allWBH{keepB};
             [~,keepM] = max(rM);wM = allWM{keepM};wMh = allWMH{keepM};
             k = ones(size(newSpikes))*ii;
-        else
+        else % Fit the glm to the training data
             wMh = glmfit(XMh(k~=ii,:),newSpikes(k~=ii),'binomial');
             wBh = glmfit(XBh(k~=ii,:),newSpikes(k~=ii),'binomial');
             wM = glmfit(XM(k~=ii,:),newSpikes(k~=ii),'binomial');
@@ -142,35 +159,49 @@ for ddd = 1:length(d)
             wGh = glmfit(XGh(k~=ii,:),newSpikes(k~=ii),'binomial');
             
         end
+        % extract the spike history filter 
         histM = buildGLM.combineWeights(dmMh,wMh(2:end));histM = histM.hist.data;
         histG = buildGLM.combineWeights(dmGh,wGh(2:end));histG = histG.hist.data;
         histB = buildGLM.combineWeights(dmBh,wBh(2:end));histB = histB.hist.data;
-        
+        % save all the spike history filters from the seperate
+        % crossvalidations
         allHistM(:,ii) = histM;
         allHistG(:,ii) = histG;
         allHistB(:,ii) = histB;
         
+        % extract all the stimulus weights for each raining set
         weightM(ii)= buildGLM.combineWeights(dmM,wM(2:end));
         weightG(ii)= buildGLM.combineWeights(dmG,wG(2:end));
         weightB(ii)= buildGLM.combineWeights(dmB,wB(2:end));
         
+        % Calculate the predicted value for the test set. After looping
+        % through all k, this vector will be full.
         YM(k==ii) = glmval(wM,XM(k==ii,:),'identity');
         YG(k==ii) = glmval(wG,XG(k==ii,:),'identity');
         YB(k==ii) = glmval(wB,XB(k==ii,:),'identity');
-        %% sim trials
+        
     end
+    %% sim trials
+    
+    % use the mean spike history filter as the history filter in the
+    % simulations
     histM = mean(allHistM,2);hM = histM(1:histSize);
     histG = mean(allHistG,2);hG = histG(1:histSize);
     histB = mean(allHistB,2);hB = histB(1:histSize);
     
+    % execute the simulations using the predetermined history length
     mechOut = simGLM4(YM,histM(1:histSize),500);
     geoOut = simGLM4(YG,histG(1:histSize),500);
     bothOut = simGLM4(YB,histB(1:histSize),500);
     
+    % Calcualte the rate for each sim trial
     mechRate = tsmovavg(mechOut','s',rateBin);mechRate= mechRate*1000;
+    % calculate the STD of the rates across trials
     mechSE = nanstd(mechRate);
+    %get the mean rate cross all the trials
     mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;
     
+    % as above. 
     geoRate = tsmovavg(geoOut','s',rateBin);geoRate = geoRate*1000;
     geoSE = nanstd(geoRate);
     geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;
@@ -178,6 +209,8 @@ for ddd = 1:length(d)
     bothRate = tsmovavg(bothOut','s',rateBin);bothRate = bothRate*1000;
     bothSE = nanstd(bothRate);
     bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;
+    
+    % calculate the spike rate. 
     rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
     
     %% get correlations
@@ -204,6 +237,8 @@ for ddd = 1:length(d)
     
     
     %% plot
+    
+    % figure of the prediction overlaid with the actual
     f1 = figure;
     subplot(311)
     shadedErrorBar(1:length(rate),geoRate,geoSE);ho; plot(geoRate);ho;plot(rate);legend({'Predicted','Actual'});
@@ -225,7 +260,7 @@ for ddd = 1:length(d)
     
     
     
-    if preRate
+    if preRate % again, probably depricated. Used if the rates were computed as the inputs to the GLM.
         f2 = figure;
         
         plot(YGr);ho;plot(rate);legend({'Predicted','Actual'});
@@ -244,7 +279,7 @@ for ddd = 1:length(d)
             cd ..
         end
     end
-    %
+    %   Save filters, doesn't work with crossvalidated data.
     %     f3 = figure;
     %     subplot(231)
     %     plot(weightG.X.data);title('Geometry Filter');legend({'R','\Theta Push'});
@@ -260,6 +295,7 @@ for ddd = 1:length(d)
     %     subplot(236)
     %     plot(hM);title('Mechanics spike history');
     
+    % plot the dependency on radial distance if possible.
     if exist('med','var')
         
         f4 = figure;
@@ -285,6 +321,8 @@ for ddd = 1:length(d)
             cd ..
         end
     end
+    
+    % save the data if desired. 
     if saveTGL
         cd done_Norm\
         save([fname '.mat']);
