@@ -1,19 +1,26 @@
+ca
 d = dir('*toGLM.mat');
+basisSize = 4;
+lastPeak = 10;
+nlOffset = 1;
+rateBin = 25;
+histSize = 5;
+bas = basisFactory.makeNonlinearRaisedCos(basisSize,1,[1 lastPeak],nlOffset);
+plot(bas.B)
+saveTGL =1;% 1 if you want to save the outputs
+pause
 for ddd = 1:length(d)
     %% load and clean data
     ca
-    clearvars -except d ddd cellType
+    clearvars -except d ddd cellType lastPeak basisSize nlOffset rateBin histSize saveTGL
     preRate = 0; % 1 if you want to calculate the rate as the predictor before fitting the GLM. Not well tested
-    noProx = 1;% 1 if you want to omit proximal deflections. 
-    saveTGL =0;% 1 if you want to save the outputs
+    noProx = 1;% 1 if you want to omit proximal deflections.
     d = dir('*toGLM.mat');% get the files in the directory that match the pathspec
-    lastPeak = 25;% # of ms in the past to look
-    basisSize = 4;% # of functions to use to define the cosine basis
-    rateBin = 25;% size of window to bin the rates at
-    histSize = 5;% number of ms in the past to consider the spike history
+    % size of window to bin the rates at
+    % number of ms in the past to consider the spike history
     d = dir('*toGLM.mat');
     ca
-    fname = [d(ddd).name(1:end-10) '_simGLM_norm'];% output filename -no suffix
+    fname = [d(ddd).name(1:end-10) '_simGLM'];% output filename -no suffix
     try
         load(d(ddd).name,'mech*','geo*','C','spike*','med','prox','dis')
     catch
@@ -21,13 +28,13 @@ for ddd = 1:length(d)
         pause
         continue
     end
-%     Enable this if you want to do something special for RA cells
-%     if cellType(ddd).type == 1
-%         histSize = 5;
-%     end
-
-% make sure the variables are in the proper orientation ( Time along the
-% first dimension
+    %     Enable this if you want to do something special for RA cells
+    %     if cellType(ddd).type == 1
+    %         histSize = 5;
+    %     end
+    
+    % make sure the variables are in the proper orientation ( Time along the
+    % first dimension
     if size(mech_85,2)>size(mech_85,1)
         mech_85 = mech_85';
         geo_85 = geo_85';
@@ -145,7 +152,7 @@ for ddd = 1:length(d)
     
     for ii = 1:numK % Crossvalidation fitting
         ii
-        if ii>numK % should be depricated. 
+        if ii>numK % should be depricated.
             [~,keepG] = max(rG);wG = allWG{keepG};wGh = allWGH{keepG};
             [~,keepB] = max(rB);wB = allWB{keepB};wBh = allWBH{keepB};
             [~,keepM] = max(rM);wM = allWM{keepM};wMh = allWMH{keepM};
@@ -159,7 +166,7 @@ for ddd = 1:length(d)
             wGh = glmfit(XGh(k~=ii,:),newSpikes(k~=ii),'binomial');
             
         end
-        % extract the spike history filter 
+        % extract the spike history filter
         histM = buildGLM.combineWeights(dmMh,wMh(2:end));histM = histM.hist.data;
         histG = buildGLM.combineWeights(dmGh,wGh(2:end));histG = histG.hist.data;
         histB = buildGLM.combineWeights(dmBh,wBh(2:end));histB = histB.hist.data;
@@ -201,16 +208,16 @@ for ddd = 1:length(d)
     %get the mean rate cross all the trials
     mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;
     
-    % as above. 
+    % as above.
     geoRate = tsmovavg(geoOut','s',rateBin);geoRate = geoRate*1000;
     geoSE = nanstd(geoRate);
     geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;
-   
+    
     bothRate = tsmovavg(bothOut','s',rateBin);bothRate = bothRate*1000;
     bothSE = nanstd(bothRate);
     bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;
     
-    % calculate the spike rate. 
+    % calculate the spike rate.
     rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
     
     %% get correlations
@@ -316,15 +323,15 @@ for ddd = 1:length(d)
         subplot(236)
         shadedErrorBar(1:length(mechRate(find(newDis))),mechRate(find(newDis)),mechSE(find(newDis)));ho; plot(rate(find(newDis)));title(['Mechanics Distal, R = ' num2str(rM_dis)])
         if saveTGL
-            cd done_Norm\
+            cd done\
             hgsave(f4,[fname '_radialDistances.fig'])
             cd ..
         end
     end
     
-    % save the data if desired. 
+    % save the data if desired.
     if saveTGL
-        cd done_Norm\
+        cd done\
         save([fname '.mat']);
         hgsave(f1,[fname '_responses.fig']);
         %        hgsave(f3,[fname '_filters.fig']);

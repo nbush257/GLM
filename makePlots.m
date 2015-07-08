@@ -30,7 +30,7 @@ title('Medial Versus Distal')
 ylabel('Pearson Correlation Coefficient')
 %% plot PCC versus preferred direction
 f3 = figure;
-dis2Pref = abs(cos(deg2rad(allprefDir)))
+dis2Pref = abs(cos(deg2rad(allPrefDir)))
 
 plot(dis2Pref,rG_all,'r*')
 ho
@@ -50,7 +50,21 @@ ax.XTick=[0 1];
 legend([pdG pdM]);
 axy(0,1)
 title('Preferred Direction')
+%% RA SA
+f4 = figure
+gType = plot(type,rG_all,'r*','DisplayName','Geo');
+ho
+mType = plot(type,rM_all,'k*','DisplayName','Mech')
+axx(-.2,2.2)
+xlabel('Cell Type')
+ylabel('Pearson Correlation Coefficient')
+ax = gca;
+ax.XTick = [0 1 2];
+title('Cell Type')
+
+
 % %%
 % saveas(f1,'awakeVanaesthetized.fig','fig')
 % saveas(f2,'medVdis.fig','fig')
 % saveas(f3,'PD.fig','fig')
+

@@ -6,7 +6,7 @@ lastPeak = 50;
 bSize = 4;
 offset = 1;
 covar = 1;
-nlOffset = 1;
+nlOffset = 10;
 
 %% handle inputs
 if ~isempty(varargin),
@@ -18,6 +18,7 @@ if ~isempty(varargin),
             case 'lastPeak', lastPeak = varargin{ii+1};
             case 'offset', offset = varargin{ii+1};
             case 'covar',covar = varargin{ii+1};
+            case 'nlOffset',nlOffset = varargin{ii+1};
             otherwise,
                 error('Not a valid input parameter');
         end

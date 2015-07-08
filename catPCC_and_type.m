@@ -4,7 +4,7 @@ rB_all = [];
 for dd = 1:40
 
     try
-        dN = dir([cellType(dd).name(1:end-10) '*smallFilt.mat'])
+        dN = dir([cellType(dd).name(1:end-10) '*.mat'])
         
         load(dN.name,'rB*','rG*','rM*')
         
