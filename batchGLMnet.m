@@ -5,9 +5,9 @@ for ddd = 1:length(d)
     clearvars -except d ddd cellType
     preRate = 0; % 1 if you want to calculate the rate as the predictor before fitting the GLM. Not well tested
     noProx = 1;% 1 if you want to omit proximal deflections. 
-    saveTGL =1;% 1 if you want to save the outputs
+    saveTGL =0;% 1 if you want to save the outputs
     d = dir('*toGLM.mat');% get the files in the directory that match the pathspec
-    filtSize = 50;% # of ms in the past to look
+    lastPeak = 25;% # of ms in the past to look
     basisSize = 4;% # of functions to use to define the cosine basis
     rateBin = 25;% size of window to bin the rates at
     histSize = 5;% number of ms in the past to consider the spike history
@@ -63,14 +63,14 @@ for ddd = 1:length(d)
     % 5 ms longer than the size of the input filter.
     newMech = [];newGeo = [];newC = [];newSpikes = [];newDis = [];newMed = [];newProx = [];
     for ii = 1:length(starts)
-        newMech = [newMech;zeros(filtSize+5,3);mech_85(starts(ii):stops(ii),:);zeros(filtSize+5,3)];
-        newGeo = [newGeo;zeros(filtSize+5,2);geo_85(starts(ii):stops(ii),:);zeros(filtSize+5,2)];
-        newC = [newC;zeros(filtSize+5,1);C(starts(ii):stops(ii));zeros(filtSize+5,1)];
-        newSpikes = [newSpikes;zeros(filtSize+5,1);spikevec(starts(ii):stops(ii));zeros(filtSize+5,1)];
+        newMech = [newMech;zeros(lastPeak+10,3);mech_85(starts(ii):stops(ii),:);zeros(lastPeak+10,3)];
+        newGeo = [newGeo;zeros(lastPeak+10,2);geo_85(starts(ii):stops(ii),:);zeros(lastPeak+10,2)];
+        newC = [newC;zeros(lastPeak+10,1);C(starts(ii):stops(ii));zeros(lastPeak+10,1)];
+        newSpikes = [newSpikes;zeros(lastPeak+10,1);spikevec(starts(ii):stops(ii));zeros(lastPeak+10,1)];
         if exist('med','var')
-            newDis = [newDis;ones(filtSize+5,1)*dis(starts(ii)); dis(starts(ii):stops(ii));ones(filtSize+5,1)*dis(stops(ii))];
-            newMed = [newMed;ones(filtSize+5,1)*med(starts(ii)); med(starts(ii):stops(ii));ones(filtSize+5,1)*med(stops(ii))];
-            newProx = [newProx;ones(filtSize+5,1)*prox(starts(ii)); prox(starts(ii):stops(ii));ones(filtSize+5,1)*prox(stops(ii))];
+            newDis = [newDis;ones(lastPeak+10,1)*dis(starts(ii)); dis(starts(ii):stops(ii));ones(lastPeak+10,1)*dis(stops(ii))];
+            newMed = [newMed;ones(lastPeak+10,1)*med(starts(ii)); med(starts(ii):stops(ii));ones(lastPeak+10,1)*med(stops(ii))];
+            newProx = [newProx;ones(lastPeak+10,1)*prox(starts(ii)); prox(starts(ii):stops(ii));ones(lastPeak+10,1)*prox(stops(ii))];
             newDis = logical(newDis);newMed = logical(newMed);newProx = logical(newMed);
         end
     end
@@ -107,10 +107,10 @@ for ddd = 1:length(d)
         rate = rate*1000;
         
         
-        [XMr,dmMr] = buildDesignMatrix(rateMech,rate,'winSize',filtSize,'bSize',basisSize);
+        [XMr,dmMr] = buildDesignMatrix(rateMech,rate,'lastPeak',lastPeak,'bSize',basisSize);
         fitMr = cvglmnet(XMr,rate,'poisson',[],[],5,[]);
         
-        [XGr,dmGr] = buildDesignMatrix(rateGeo,rate,'winSize',filtSize,'bSize',basisSize);
+        [XGr,dmGr] = buildDesignMatrix(rateGeo,rate,'lastPeak',lastPeak,'bSize',basisSize);
         fitGr = cvglmnet(XGr,rate,'poisson',[],[],5,[]);
         YMr = cvglmnetPredict(fitMr,XMr,[],'response');
         YGr = cvglmnetPredict(fitGr,XGr,[],'response');
@@ -132,12 +132,12 @@ for ddd = 1:length(d)
     
     % Apply the filters and set up the dsign matrices. Uses Pillow's glm
     % code
-    [XM,dmM] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);% mechanics
-    [XG,dmG] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);% Geo
-    [XMh,dmMh] = buildDesignMatrix(newMech,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);% Mech spike history
-    [XGh,dmGh] = buildDesignMatrix(newGeo,newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);% Geo spike history
-    [XB,dmB] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',0);% Both
-    [XBh,dmBh] = buildDesignMatrix([newMech newGeo],newSpikes,'winSize',filtSize,'bSize',basisSize,'hist',1);% Both spike history
+    [XM,dmM] = buildDesignMatrix(newMech,newSpikes,'lastPeak',lastPeak,'bSize',basisSize,'hist',0);% mechanics
+    [XG,dmG] = buildDesignMatrix(newGeo,newSpikes,'lastPeak',lastPeak,'bSize',basisSize,'hist',0);% Geo
+    [XMh,dmMh] = buildDesignMatrix(newMech,newSpikes,'lastPeak',lastPeak,'bSize',basisSize,'hist',1);% Mech spike history
+    [XGh,dmGh] = buildDesignMatrix(newGeo,newSpikes,'lastPeak',lastPeak,'bSize',basisSize,'hist',1);% Geo spike history
+    [XB,dmB] = buildDesignMatrix([newMech newGeo],newSpikes,'lastPeak',lastPeak,'bSize',basisSize,'hist',0);% Both
+    [XBh,dmBh] = buildDesignMatrix([newMech newGeo],newSpikes,'lastPeak',lastPeak,'bSize',basisSize,'hist',1);% Both spike history
     % initialize the GLMval output.
     YM = zeros(size(newC));
     YB = zeros(size(newC));

@@ -7,17 +7,17 @@ allPrefDir =[NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,90,225,
 for dd = 1:length(d)
     d(dd).name
     load(d(dd).name,'mechOut','geoOut','bothOut','newSpikes');
-    mechRate = tsmovavg(mechOut','s',rateBin);
+    mechRate = tsmovavg(mechOut','s',rateBin);mechRate = mechRate*1000;
     mechSE = nanstd(mechRate)./sqrt(size(mechRate,1));
-    mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;mechRate = mechRate*1000;
-    geoRate = tsmovavg(geoOut','s',rateBin);
+    mechRate = nanmean(mechRate);mechRate = mechRate';mechRate(isnan(mechRate))=0;
     
+    geoRate = tsmovavg(geoOut','s',rateBin);geoRate = geoRate*1000;
     geoSE = nanstd(geoRate)./sqrt(size(geoRate,1));
-    geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;geoRate = geoRate*1000;
-    bothRate = tsmovavg(bothOut','s',rateBin);
+    geoRate = nanmean(geoRate);geoRate = geoRate';geoRate(isnan(geoRate))=0;
     
-    bothSE = nanstd(bothRate)./sqrt(size(bothRate,1));
-    bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;bothRate = bothRate*1000;
+    bothRate = tsmovavg(bothOut','s',rateBin);
+    bothSE = nanstd(bothRate)./sqrt(size(bothRate,1));bothRate = bothRate*1000;
+    bothRate = nanmean(bothRate);bothRate = bothRate';bothRate(isnan(bothRate))=0;
     rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
     
     

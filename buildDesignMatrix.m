@@ -2,10 +2,11 @@ function [Xout,dm] = buildDesignMatrix(X,spikes,varargin)
 
 deriv = 1;
 hist = 0;
-winSize = 50;
+lastPeak = 50;
 bSize = 4;
 offset = 1;
 covar = 1;
+nlOffset = 1;
 
 %% handle inputs
 if ~isempty(varargin),
@@ -14,7 +15,7 @@ if ~isempty(varargin),
             case 'deriv', deriv = varargin{ii+1};
             case 'hist', hist = varargin{ii+1};
             case 'bSize', bSize = varargin{ii+1};
-            case 'winSize', winSize = varargin{ii+1};
+            case 'lastPeak', lastPeak = varargin{ii+1};
             case 'offset', offset = varargin{ii+1};
             case 'covar',covar = varargin{ii+1};
             otherwise,
@@ -54,7 +55,7 @@ end
 expt = buildGLM.addTrial(expt,trial,1);
 dspec = buildGLM.initDesignSpec(expt);
 
-bsStim = basisFactory.makeNonlinearRaisedCos(bSize,1,[offset lastPeak],1);
+bsStim = basisFactory.makeNonlinearRaisedCos(bSize,1,[offset lastPeak],nlOffset);
 
 if hist
     dspec = buildGLM.addCovariateSpiketrain(dspec,'hist','sptrain','History Filter');
