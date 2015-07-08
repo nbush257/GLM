@@ -54,7 +54,7 @@ end
 expt = buildGLM.addTrial(expt,trial,1);
 dspec = buildGLM.initDesignSpec(expt);
 
-bsStim = basisFactory.makeSmoothTemporalBasis('raised cosine',winSize, bSize, expt.binfun);
+bsStim = basisFactory.makeNonlinearRaisedCos(bSize,1,[offset lastPeak],1);
 
 if hist
     dspec = buildGLM.addCovariateSpiketrain(dspec,'hist','sptrain','History Filter');
