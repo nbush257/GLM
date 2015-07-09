@@ -1,4 +1,4 @@
-rateBin = 25;
+rateBin = 100;
 d = dir('*simGLM.mat')
 
 type = [0;2;0;2;0;1;2;0;1;1;0;0;1;2;0;2;0;0;0;0;0;1;1;1;0;0;1;1;2;0;0;0;0;0;0;1;1;1;0;0];
@@ -21,33 +21,33 @@ for dd = 1:length(d)
     rate = tsmovavg(newSpikes','s',rateBin);rate = rate';rate(isnan(rate))=0;rate = rate*1000;
     
     
-    rG = corr(geoRate,rate);
-    rM = corr(mechRate,rate);
-    rB = corr(bothRate,rate);
+    rGo(dd) = corr(geoRate,rate);
+    rMo(dd) = corr(mechRate,rate);
+    rBo(dd) = corr(bothRate,rate);
     
     
     f1 = figure;
     subplot(311)
     plot(geoRate);ho;plot(rate);legend({'Predicted','Actual'});
-    title(['Geometry: Pearson Correlation Coefficent = ' num2str(rG)])
+    title(['Geometry: Pearson Correlation Coefficent = ' num2str(rGo)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
     subplot(312)
     
     plot(mechRate);ho;plot(rate);legend({'Predicted','Actual'});
-    title(['Mechanics: Pearson Correlation Coefficent = ' num2str(rM)])
+    title(['Mechanics: Pearson Correlation Coefficent = ' num2str(rMo)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
     
     subplot(313)
     plot(bothRate);ho;plot(rate);legend({'Predicted','Actual'});
-    title(['Both: Pearson Correlation Coefficent = ' num2str(rB)])
+    title(['Both: Pearson Correlation Coefficent = ' num2str(rBo)])
     xlabel('time (ms)')
     ylabel('Spike Rate')
     uicontrol('Style','text','String',['Type = ' strType(type(dd)+1)],'Position',[20 0 200 30])
     
     set(gcf,'Position',[ 1          41        1920         963])
     
-    pause
+%     pause
     c;ca;
 end
