@@ -22,11 +22,14 @@ stops = find(diff(in.C)==-1);
 
 %set noncontact vars to zeros
 in.X(~in.C,:)=0;
+in.X_noHist(~in.C,:) = 0;
 % interpolate over remaining nans
 in.X = naninterp(in.X);
+in.X_noHist = naninterp(in.X_noHist);
 
 % scale X
 in.X = zscore(in.X);
+in.X_noHist = zscore(in.X_noHist);
 
 % init crossvalidate
 train.k = crossvalind('Kfold',length(in.C),numK);
@@ -36,21 +39,28 @@ test.bool =false(size(in.C));
 
 %this is dumb. Maybe refactor this later
 for ii = 1:length(starts)
-    if length(starts) == 1
-        test.bool(1:end) = in.C;
-        break
-    end
     
     if starts(ii)<=in.filtSize
-        test.bool(1:stops(ii)+in.filtSize) = 1;
-    elseif stops(ii)+in.filtSize>length(test.bool)
-        test.bool(starts(ii)-in.filtSize:end) = 1;
-    else
-        test.bool(starts(ii)-in.filtSize:stops(ii)+in.filtSize) = 1;
+        if stops(ii)+in.filtSize>length(test.bool)
+            test.bool(1:end) = 1;
+            continue
+        else
+            test.bool(1:stops(ii)+in.filtSize) = 1;
+            continue
+        end
     end
+    if stops(ii)+in.filtSize>length(test.bool)
+        test.bool(starts(ii)-in.filtSize:end) = 1;
+        continue
+    end
+    
+    test.bool(starts(ii)-in.filtSize:stops(ii)+in.filtSize) = 1;
+    
 end
 
+
 test.X = in.X(test.bool,:);
+test.X_noHist = in.X_noHist(test.bool,:);
 test.k = train.k(test.bool);
 
 %init output
@@ -59,12 +69,12 @@ out.predictiveModeY = zeros(sum(test.bool),1);
 
 % run GLM
 for ii = 1:numK
-    [wNoHist,dev,stats] = glmfit(in.X_noHist(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
-    wHist = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+    [w,dev,stats] = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+    %wHist = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
     
     % currently only fitting once . may need to split the history and
     % stimulus fitting as I was doing before
-    weights = buildGLM.combineWeights(in.dm_noHist,wNoHist(2:end));
+    weights = buildGLM.combineWeights(in.dm,w(2:end));
     if any(strcmp(fieldnames(weights),'X'))
         stimWeights = weights.X.data;
     else
@@ -82,14 +92,14 @@ for ii = 1:numK
     allStats{ii} = stats;
     
     
-    out.predictiveModeY(test.k == ii) = glmval(wHist,in.X(test.k==ii,:),'logit');
-    out.Y(test.k == ii) = glmval(wNoHist,in.X_noHist(test.k==ii,:),'identity');
+    out.predictiveModeY(test.k == ii) = glmval(w,test.X(test.k==ii,:),'logit');
+    out.Y(test.k == ii) = glmval(w([1 in.histSize+2:end]),test.X(test.k==ii,(in.histSize+1:end)),'identity');
 end
 
 
 % sim GLM
 % calculating spike history term on the whole trace
-wHist= glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+wHist= glmfit(in.X,in.spikes,'binomial');
 hist = buildGLM.combineWeights(in.dm,wHist(2:end));
 hist = hist.hist.data;
 
