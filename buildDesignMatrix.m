@@ -7,7 +7,11 @@ bSize = 4;
 offset = 1;
 covar = 1;
 nlOffset = 10;
+spikePeak1= 1;
+spikePeak2 = 3;
 
+bsStim = basisFactory.makeNonlinearRaisedCos(bSize,1,[offset lastPeak],nlOffset);
+bsSpike = basisFactory.makeNonlinearRaisedCos(2,1,[spikePeak1 spikePeak2],nlOffset);
 %% handle inputs
 if ~isempty(varargin),
     for ii = 1:2:(length(varargin))
@@ -19,6 +23,8 @@ if ~isempty(varargin),
             case 'offset', offset = varargin{ii+1};
             case 'covar',covar = varargin{ii+1};
             case 'nlOffset',nlOffset = varargin{ii+1};
+            case 'bsStim',bsStim = varargin{ii+1};
+            case 'bsSpike',bsSpike = varargin{ii+1};
             otherwise,
                 error('Not a valid input parameter');
         end
@@ -56,10 +62,9 @@ end
 expt = buildGLM.addTrial(expt,trial,1);
 dspec = buildGLM.initDesignSpec(expt);
 
-bsStim = basisFactory.makeNonlinearRaisedCos(bSize,1,[offset lastPeak],nlOffset);
-
 if hist
-    dspec = buildGLM.addCovariateSpiketrain(dspec,'hist','sptrain','History Filter');
+    
+    dspec = buildGLM.addCovariateSpiketrain(dspec,'hist','sptrain','History Filter',bsSpike);
 end
 
 if covar

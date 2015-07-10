@@ -30,7 +30,7 @@ ctrs(ii) =nlin(firstPeak+b)+(db*(ii-1));
 end
 
 %ctrs = yrnge(1):db:yrnge(2); % centers for basis vectors
-mxt = maxWin;%invnl(ctrs(end)+2*db) - b; % maximum time bin
+mxt = invnl(ctrs(end)+2*db) - b; % maximum time bin
 iht = (0:binSize:mxt)';
 ff = @(x,c,dc) (cos(max(-pi, min(pi, (x-c)*pi/dc/2))) + 1)/2;% pi/dc/2 = a!
 ihbasis = ff(repmat(nlin(iht + b), 1, nBases), repmat(ctrs, numel(iht), 1), db);

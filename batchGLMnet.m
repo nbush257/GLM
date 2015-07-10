@@ -3,13 +3,13 @@ d = dir('*toGLM.mat');
 basisSize = 4;
 lastPeak = 10;
 nlOffset = 1;
-rateBin = 25;
+rateBin = 75;
 histSize = 5;
 bas = basisFactory.makeNonlinearRaisedCos(basisSize,1,[1 lastPeak],nlOffset);
 plot(bas.B)
-saveTGL =1;% 1 if you want to save the outputs
+saveTGL =0;% 1 if you want to save the outputs
 pause
-for ddd = 1:length(d)
+for ddd = 11:length(d)
     %% load and clean data
     ca
     clearvars -except d ddd cellType lastPeak basisSize nlOffset rateBin histSize saveTGL
