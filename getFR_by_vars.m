@@ -60,13 +60,57 @@ for di = 1:length(dter)
         FR{di} = avgFR;
 end
 %% show that R is not valid in awake, but yes in anaesth
-awakeP = [p(1:10).R]<(.005) % 1 of 10 bonferroni p<.05
-anaesthP = [p(11:end).R]<(.05/30) % 11 of 30 bonferroni p<.05
+awakePR = [p(1:10).R]<(.005) % 1 of 10 bonferroni p<.05
+anaesthPR = [p(11:end).R]<(.05/30) % 11 of 30 bonferroni p<.05
 
-awakeR = [Rsquared(1:10).R];
-anaesthR = [Rsquared(11:end).R];
+awakeRR = [Rsquared(1:10).R];
+anaesthRR = [Rsquared(11:end).R];
 
-nanmean(awakeR(awakeP)) % one example, .484
-nanmean(anaesthR(anaesthP))% 11 examples min= .05, max = .44 mean = .2 
+nanmean(awakeRR(awakePR)) % one example, .484
+nanmean(anaesthRR(anaesthPR))% 11 examples min= .05, max = .44 mean = .2 
 % R alone is not an accurate predictor of Firing Rate in active or passive
 % case
+%% M
+awakePM = [p(1:10).M]<.005
+anaesthPM = [p(11:end).M]<(.05/30) 
+
+
+awakeRM = [Rsquared(1:10).M]
+anaesthRM = [Rsquared(11:end).M]
+
+nanmean(awakeRM(awakePM))
+nanmean(anaesthRM(anaesthPM))
+%% TH
+
+
+awakePTH= [p(1:10).TH]<.005
+anaesthPTH = [p(11:end).TH]<(.05/30) 
+
+
+awakeRTH = [Rsquared(1:10).TH]
+anaesthRTH = [Rsquared(11:end).TH]
+
+nanmean(awakeRTH(awakePTH))
+nanmean(anaesthRTH(anaesthPTH))
+%% FX
+
+
+awakePFX= [p(1:10).FX]<.005
+anaesthPFX = [p(11:end).FX]<(.05/30) 
+
+awakeRFX = [Rsquared(1:10).FX]
+anaesthRFX = [Rsquared(11:end).FX]
+
+nanmean(awakeRFX(awakePFX))
+nanmean(anaesthRFX(anaesthPFX))
+%% FX
+
+
+awakePFY= [p(1:10).FY]<.005
+anaesthPFY = [p(11:end).FY]<(.05/30) 
+
+awakeRFY = [Rsquared(1:10).FY]
+anaesthRFY = [Rsquared(11:end).FY]
+
+nanmean(awakeRFY(awakePFY))
+nanmean(anaesthRFY(anaesthPFY))
