@@ -1,6 +1,7 @@
-function out = procVG_GLM(in)
+function out = procVG_GLM(in,bases)
 %% parameters
 numK = 5;
+numHistDims = in.histSize;
 %%
 if size(in.X,2)>size(in.X,1)
     in.X = in.X';
@@ -65,48 +66,64 @@ test.k = train.k(test.bool);
 
 %init output
 out.Y = zeros(sum(test.bool),1);
+out.Y_noHist = zeros(sum(test.bool),1);
 out.predictiveModeY = zeros(sum(test.bool),1);
 
 % run GLM
 for ii = 1:numK
-    [w,dev,stats] = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
-    %wHist = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+    wNoHist = glmfit(in.X_noHist(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+    wHist = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
     
-    % currently only fitting once . may need to split the history and
-    % stimulus fitting as I was doing before
-    weights = buildGLM.combineWeights(in.dm,w(2:end));
-    if any(strcmp(fieldnames(weights),'X'))
-        stimWeights = weights.X.data;
+    weightsNoHist = buildGLM.combineWeights(in.dm_noHist,wNoHist(2:end));
+    weightsHist = buildGLM.combineWeights(in.dm,wHist(2:end));
+    
+    if any(strcmp(fieldnames(weightsHist),'X'))
+        stimWeights = weightsHist.X.data;
+        stimWeightsNoHist = weightsNoHist.X.data;
     else
         stimWeights = [];
+        stimWeightsNoHist = [];
     end
-    if any(strcmp(fieldnames(weights),'derivative'))
-        derivWeights = weights.derivative.data;
+    if any(strcmp(fieldnames(weightsHist),'derivative'))
+        derivWeights = weightsHist.derivative.data;
+        derivWeightsNoHist = weightsNoHist.derivative.data;
     else
         derivWeights = [];
+        derivWeightsNoHist = [];
     end
+    
+    
     allStimWeight{ii} = stimWeights;
+    allStimWeightNoHist{ii} = stimWeightsNoHist;
+    
     allDerivWeight{ii} = derivWeights;
-    
-    allDev{ii} = dev;
-    allStats{ii} = stats;
+    allDerivWeightNoHist{ii} = derivWeightsNoHist;
     
     
-    out.predictiveModeY(test.k == ii) = glmval(w,test.X(test.k==ii,:),'logit');
-    out.Y(test.k == ii) = glmval(w([1 in.histSize+2:end]),test.X(test.k==ii,(in.histSize+1:end)),'identity');
+    out.predictiveModeY(test.k == ii) = glmval(wHist,test.X(test.k==ii,:),'logit');
+    out.Y_noHist(test.k ==ii) = glmval(wNoHist,test.X_noHist(test.k==ii,:),'logit');
+    out.Y(test.k == ii) = glmval(wHist([1 numHistDims+2:end]),test.X_noHist(test.k==ii,:),'identity');
 end
 
 
 % sim GLM
 % calculating spike history term on the whole trace
-wHist= glmfit(in.X,in.spikes,'binomial');
+
+
 hist = buildGLM.combineWeights(in.dm,wHist(2:end));
 hist = hist.hist.data;
 
 out.raster = simGLM4(out.Y,hist,500);
 
 out.P = mean(out.raster,2);
-[x,y,thresh,AUC] = perfcurve(in.spikes(test.bool),out.P,'1');
+try
+    [x,y,thresh,AUC] = perfcurve(in.spikes(test.bool),out.P,'1');
+catch
+    x = [];
+    y = [];
+    thressh = []
+    AUC = [];
+end
 
 %% output handling
 out.AUC = AUC;
@@ -114,12 +131,17 @@ out.ROC_x =x;
 out.ROC_y = y;
 out.thresh = thresh;
 out.stimWeights = allStimWeight;
+out.stimWeightsNoHist = allStimWeightNoHist;
 out.derivWeight = allDerivWeight;
-out.dev = allDev;
-out.stats = allStats;
+out.derivWeightNoHist = allDerivWeightNoHist;
+out.wHist = wHist;
+out.wNoHist = wNoHist;
+out.dm = in.dm;
+out.dm_nh = in.dm_noHist;
 out.tested_spikes=  in.spikes(test.bool);
 out.spikeHistory = hist;
 out.test_set = test.bool;
+out.bases = bases;
 
 
 

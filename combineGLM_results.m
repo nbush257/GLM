@@ -1,6 +1,6 @@
 % get all vars
 d = dir('*Hist.mat')
-for dd = 1:length(d)
+for dd = 2:length(d)
     load(d(dd).name)
     dd
     

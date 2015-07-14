@@ -1,3 +1,4 @@
+d = dir('*Hist.mat');
 % Names
 names = {}
 for ii = 1:length(d)
