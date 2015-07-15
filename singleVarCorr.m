@@ -1,12 +1,15 @@
 % single variable correlations
+clear
+ca
+c
 D = dir('*GLM.mat')
 binsize = 50;
-clear p RSQ
-for II = 1:length(D)-1
+for II = 1:length(D)
     II
     load(D(II).name)
+    opts = statset('UseParallel',1);
     if iscolumn(spikevec); spikevec = spikevec';end
-    if size(mech_85,2)<size(mech_85,1)
+    if size(mech_85,1)<size(mech_85,2)
         mech_85 = mech_85';
         geo_85 = geo_85';
     end
@@ -15,63 +18,43 @@ for II = 1:length(D)-1
     if exist('prox','var')
         C(prox) = 0;
     end
-    mech_85(:,~C)=0;
-    geo_85(:,~C)=0;
+    mech_85(~C,:)=0;
+    geo_85(~C,:)=0;
     
-    rate_mech = tsmovavg(mech_85,'s',binsize);%rate_mech(isnan(rate_mech)) = [];
-    rate_geo = tsmovavg(geo_85,'s',binsize);%rate_geo(isnan(rate_geo)) = [];
-    rate_spike = tsmovavg(spikevec,'s',binsize);%rate_spike(isnan(rate_spike)) = [];
+    rate_mech = tsmovavg(mech_85','s',binsize);rate_mech(:,isnan(rate_mech(1,:))) = [];
+    rate_geo = tsmovavg(geo_85','s',binsize);rate_geo(:,isnan(rate_geo(1,:))) = [];
+    rate_spike = tsmovavg(spikevec,'s',binsize);rate_spike(isnan(rate_spike)) = [];
     
     if II == 1
         keeperMech = rate_mech;
         keeperGeo = rate_geo;
         keeperRate = rate_spike;
     end
-    FXfit = fitlm(rate_mech(1,:),rate_spike);
-    FYfit = fitlm(rate_mech(2,:),rate_spike);
-    Mfit = fitlm(rate_mech(3,:),rate_spike);
     
-    Rfit = fitlm(rate_geo(1,:),rate_spike);
-    THfit = fitlm(rate_geo(2,:),rate_spike);
+    mechCorr = bootstrp(100,@corr,rate_mech',rate_spike','Options',opts);
+    mechCorr = mechCorr.^2;
+    mechSE = std(mechCorr);
+    geoCorr = bootstrp(100,@corr,rate_geo',rate_spike','Options',opts);
+    geoCorr = geoCorr.^2;
+    geoSE = std(geoCorr);
+    Corr(II).FX = mechCorr(:,1);
+    Corr(II).FY = mechCorr(:,2);
+    Corr(II).M = mechCorr(:,3);
     
-    p(II).FX = FXfit.coefTest;
-    p(II).FY = FYfit.coefTest;
-    p(II).M = Mfit.coefTest;
-    p(II).R = Rfit.coefTest;
-    p(II).TH = THfit.coefTest;
+    Corr(II).R = geoCorr(:,1);
+    Corr(II).TH = geoCorr(:,2);
     
-    RSQ(II).FX = FXfit.Rsquared.Adjusted;
-    RSQ(II).FY = FYfit.Rsquared.Adjusted;
-    RSQ(II).M = Mfit.Rsquared.Adjusted;
-    RSQ(II).R = Rfit.Rsquared.Adjusted;
-    RSQ(II).TH = THfit.Rsquared.Adjusted;
+    SE(II).FX = mechSE(:,1);
+    SE(II).FY = mechSE(:,2);
+    SE(II).M = mechSE(:,3);
     
+    SE(II).R = geoSE(:,1);
+    SE(II).TH = geoSE(:,2);
     
 end
-clearvars -except p RSQ keeper*
-%% plot
-cd FigC
-rmR = [p.R]>(.05);
-rmFX = [p.FX]>(.05);
-rmFY = [p.FY]>(.05);
-rmM = [p.M]>(.05);
-rmTH = [p.TH]>(.05);
+clearvars -except Corr SE
+errorbar(mean([Corr.M]),[SE.M],'ko');ho
+errorbar(mean([Corr.FX]),[SE.FX],'ko')
+errorbar(mean([Corr.TH]),[SE.R],'ko')
+errorbar(mean([Corr.R]),[SE.TH],'ko')
 
-R = [RSQ.R];
-FX = [RSQ.FX];
-FY = [RSQ.FY];
-M = [RSQ.M];
-TH = [RSQ.TH];
-
-RNS = R(rmR);
-FXNS = FX(rmFX);
-FYNS = FY(rmFY);
-MNS = M(rmM);
-THNS = TH(rmTH);
-
-R(rmR) = NaN;
-FX(rmFX) = NaN;
-FY(rmFY) = NaN;
-M(rmM) = NaN;
-TH(rmTH) = NaN;
-%%
