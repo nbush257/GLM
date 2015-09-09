@@ -9,7 +9,7 @@ nlOffset = 1;
 rateBin = 75;
 suffix = '_simGLM';
 saveLoc = 'done';mkdir(saveLoc)
-stimBasis = basisFactory.makeNonlinearRaisedCos(basisSize,1,[1 lastPeak],nlOffset);
+stimBasis = basisFactory.makeNonlinearRaisedCos(basisSize,1,[1 lastPeak],nlOffset);plot(stimBasis)
 histBasis =makeNonlinearRaisedCos_nb(2,1,0,2,1);
 subplot(211)
 plot(stimBasis.B)
