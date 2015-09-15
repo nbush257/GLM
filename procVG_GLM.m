@@ -1,5 +1,7 @@
 function out = procVG_GLM(in,bases)
 %% parameters
+simulate = 1;
+glmnetFlag = 0;
 numK = 5;
 numHistDims = in.histSize;
 %%
@@ -28,9 +30,9 @@ in.X_noHist(~in.C,:) = 0;
 in.X = naninterp(in.X);
 in.X_noHist = naninterp(in.X_noHist);
 
-% scale X
-in.X = zscore(in.X);
-in.X_noHist = zscore(in.X_noHist);
+% % scale X
+% in.X = zscore(in.X);
+% in.X_noHist = zscore(in.X_noHist);
 
 % init crossvalidate
 train.k = crossvalind('Kfold',length(in.C),numK);
@@ -68,81 +70,125 @@ test.k = train.k(test.bool);
 out.Y = zeros(sum(test.bool),1);
 out.Y_noHist = zeros(sum(test.bool),1);
 out.predictiveModeY = zeros(sum(test.bool),1);
-
-% run GLM
-for ii = 1:numK
-    wNoHist = glmfit(in.X_noHist(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
-    wHist = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+nl = @(x) 1./(1+exp(-x));
+%% run GLM
+%%
+if glmnetFlag
+    out.FIT_noHist = cvglmnet(in.X_noHist,in.spikes,'binomial',[],[],5,[],1);
+    PRED_noHist = cvglmnetPredict(out.FIT_noHist,test.X_noHist,out.FIT_noHist.lambda_1se,'response');
+    out.Y_noHist = PRED_noHist;
     
-    weightsNoHist = buildGLM.combineWeights(in.dm_noHist,wNoHist(2:end));
-    weightsHist = buildGLM.combineWeights(in.dm,wHist(2:end));
+    out.FIT = cvglmnet(in.X,in.spikes,'binomial',[],[],5,[],0);
+    idx = find(out.FIT.glmnet_fit.lambda ==out.FIT.lambda_1se);
     
-    if any(strcmp(fieldnames(weightsHist),'X'))
-        stimWeights = weightsHist.X.data;
-        stimWeightsNoHist = weightsNoHist.X.data;
+    coeffs = [out.FIT.glmnet_fit.a0(idx);out.FIT.glmnet_fit.beta(:,idx)];
+    PRED = glmval(coeffs([1 numHistDims+2:end]),test.X_noHist,'identity');
+    
+    
+    hist = buildGLM.combineWeights(in.dm,out.FIT.glmnet_fit.beta(:,idx));
+    hist = hist.hist.data;
+    PREDictive = cvglmnetPredict(out.FIT,test.X);
+    out.predictiveModeY = nl(PREDictive);
+    
+    if simulate
+        out.raster = simGLM4(PRED,hist,500);
+        out.P = mean(out.raster,2);
     else
-        stimWeights = [];
-        stimWeightsNoHist = [];
+        hist = [];
+        out.raster = [];
+        out.P = [];
     end
-    if any(strcmp(fieldnames(weightsHist),'derivative'))
-        derivWeights = weightsHist.derivative.data;
-        derivWeightsNoHist = weightsNoHist.derivative.data;
+    out.tested_spikes=  in.spikes(test.bool);
+    
+end
+%%
+if ~glmnetFlag
+    for ii = 1:numK
+        
+        [wNoHist,~,stats{ii}] = glmfit(in.X_noHist(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+        
+        wHist = glmfit(in.X(train.k~=ii,:),in.spikes(train.k~=ii),'binomial');
+        
+        weightsNoHist = buildGLM.combineWeights(in.dm_noHist,wNoHist(2:end));
+        weightsHist = buildGLM.combineWeights(in.dm,wHist(2:end));
+        
+        if any(strcmp(fieldnames(weightsHist),'X'))
+            stimWeights = weightsHist.X.data;
+            stimWeightsNoHist = weightsNoHist.X.data;
+        else
+            stimWeights = [];
+            stimWeightsNoHist = [];
+        end
+        if any(strcmp(fieldnames(weightsHist),'derivative'))
+            derivWeights = weightsHist.derivative.data;
+            derivWeightsNoHist = weightsNoHist.derivative.data;
+        else
+            derivWeights = [];
+            derivWeightsNoHist = [];
+        end
+        
+        
+        allStimWeight{ii} = stimWeights;
+        allStimWeightNoHist{ii} = stimWeightsNoHist;
+        
+        allDerivWeight{ii} = derivWeights;
+        allDerivWeightNoHist{ii} = derivWeightsNoHist;
+        
+        
+        out.predictiveModeY(test.k == ii) = glmval(wHist,test.X(test.k==ii,:),'logit');
+        out.Y_noHist(test.k ==ii) = glmval(wNoHist,test.X_noHist(test.k==ii,:),'logit');
+        out.Y(test.k == ii) = glmval(wHist([1 numHistDims+2:end]),test.X_noHist(test.k==ii,:),'identity');
+    end
+    
+    
+    % sim GLM
+    % calculating spike history term on the whole trace
+    
+    if simulate
+        hist = buildGLM.combineWeights(in.dm,wHist(2:end));
+        hist = hist.hist.data;
+        
+        out.raster = simGLM4(out.Y,hist,500);
+        
+        out.P = mean(out.raster,2);
     else
-        derivWeights = [];
-        derivWeightsNoHist = [];
+        hist = [];
+        out.raster = [];
+        out.P = [];
     end
     
+    out.stimWeights = allStimWeight;
+    out.stimWeightsNoHist = allStimWeightNoHist;
+    out.derivWeight = allDerivWeight;
+    out.derivWeightNoHist = allDerivWeightNoHist;
     
-    allStimWeight{ii} = stimWeights;
-    allStimWeightNoHist{ii} = stimWeightsNoHist;
+    out.wHist = wHist;
+    out.wNoHist = wNoHist;
+    out.tested_spikes=  in.spikes(test.bool);
+    out.test_set = test.bool;
     
-    allDerivWeight{ii} = derivWeights;
-    allDerivWeightNoHist{ii} = derivWeightsNoHist;
+    out.stats = stats;
     
-    
-    out.predictiveModeY(test.k == ii) = glmval(wHist,test.X(test.k==ii,:),'logit');
-    out.Y_noHist(test.k ==ii) = glmval(wNoHist,test.X_noHist(test.k==ii,:),'logit');
-    out.Y(test.k == ii) = glmval(wHist([1 numHistDims+2:end]),test.X_noHist(test.k==ii,:),'identity');
 end
 
+% try
+%     [x,y,thresh,AUC] = perfcurve(in.spikes(test.bool),out.P,'1');
+% catch
+%     x = [];
+%     y = [];
+%     thresh = []
+%     AUC = [];
+% end
 
-% sim GLM
-% calculating spike history term on the whole trace
-
-
-hist = buildGLM.combineWeights(in.dm,wHist(2:end));
-hist = hist.hist.data;
-
-out.raster = simGLM4(out.Y,hist,500);
-
-out.P = mean(out.raster,2);
-try
-    [x,y,thresh,AUC] = perfcurve(in.spikes(test.bool),out.P,'1');
-catch
-    x = [];
-    y = [];
-    thressh = []
-    AUC = [];
-end
-
-%% output handling
-out.AUC = AUC;
-out.ROC_x =x;
-out.ROC_y = y;
-out.thresh = thresh;
-out.stimWeights = allStimWeight;
-out.stimWeightsNoHist = allStimWeightNoHist;
-out.derivWeight = allDerivWeight;
-out.derivWeightNoHist = allDerivWeightNoHist;
-out.wHist = wHist;
-out.wNoHist = wNoHist;
+% %% output handling
+% out.AUC = AUC;
+% out.ROC_x =x;
+% out.ROC_y = y;
+% out.thresh = thresh;
 out.dm = in.dm;
 out.dm_nh = in.dm_noHist;
-out.tested_spikes=  in.spikes(test.bool);
 out.spikeHistory = hist;
-out.test_set = test.bool;
 out.bases = bases;
-
 
 
 

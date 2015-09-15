@@ -28,14 +28,21 @@ while but~=3 % right click exits
     X = xlim;
     Y = ylim;
     [x,~,but] = ginput(2);
-    prox(x(1):x(2)) = 1;
-    cla
-    plot(Geo.R)
-    ho
-    plot(find(prox),Geo.R(find(prox)),'g')
-    
-    axx(X(1),X(2));
-    axy(Y(1),Y(2));
+    if but~=3
+        if x(2)>length(Geo.R)
+            x(2) = length(Geo.R);
+        end
+        
+        prox(x(1):x(2)) = 1;
+        
+        clf
+        plot(Geo.R)
+        ho
+        plot(find(prox),Geo.R(find(prox)),'g')
+        
+        axx(X(1),X(2));
+        axy(Y(1),Y(2));
+    end
 end
 
 %% Find Distal
@@ -49,15 +56,22 @@ while but~=3 % right click to exit
     X = xlim;
     Y = ylim;
     [x,~,but] = ginput(2);
-    dis(x(1):x(2)) = 1;
-    cla
-    plot(Geo.R)
-    ho
-    plot(find(prox),Geo.R(find(prox)),'g')
-    plot(find(dis),Geo.R(find(dis)),'r')
-    axx(X(1),X(2));
-    axy(Y(1),Y(2));
     
+    if but~=3
+        
+        if x(2)>length(Geo.R)
+            x(2) = length(Geo.R);
+        end
+        
+        dis(x(1):x(2)) = 1;
+        clf
+        plot(Geo.R)
+        ho
+        plot(find(prox),Geo.R(find(prox)),'g')
+        plot(find(dis),Geo.R(find(dis)),'r')
+        axx(X(1),X(2));
+        axy(Y(1),Y(2));
+    end
     
 end
 

@@ -1,77 +1,151 @@
+names = dir('*noM.mat')
 for ii = 1:length(names)
     if any(regexp(names(ii).name,'Rat1*'))
-        nTitle{ii} = names(ii).name(9:12);
+        nTitle{ii} = names(ii).name(9:11);
     else
         nTitle{ii} = names(ii).name([9:10 21 22 28:33])
     end
 end
+%% Find ISI peaks
+idx = [];
+for ii = 1:37
+    ISI = diff(find(spikes{ii}));
+    ISI(ISI>200) = [];
+    [N,X] = hist(ISI,100);
+    [mN,idmN] = max(N);
+    idx(ii) = round(X(find(N<(max(N)/2) & X> X(idmN),1)));
+    idx(ii)
+    
+end
+%% manually grab the knee_pt
+% for ii = 1:length(r)
+%     ca
+%     plot(stdRange(1:150),r(ii).noHistG(1:150));ln2
+%     ho
+%     plot(stdRange(1:150),r(ii).noHistM(1:150));ln2
+%
+%     [x,~] = ginput(1);
+%     gIdx(ii) = dsearchn([r(ii).noHistG(1:150)]',[x]);
+%     mIdx(ii) = dsearchn([r(ii).noHistM(1:150)]',[x]);
+%     cla
+%
+% end
 
-for ii = 1:length(r)
+%% compare derivative
+f1 = figure;
+f2 = figure;
+for ii= 1:37
+    figure(f1)
+    subplot(6,7,ii)
+    ho
+    plot(r(ii).noHistG(1:200),'g');ln2
+    plot(r(ii).noHistGND(1:200),'r');ln2
+    plot(r(ii).noHistGJD(1:200),'b');ln2
+    title(nTitle{ii})
+    plot(idx(ii),r(ii).noHistG(idx(ii)),'k*')
+    plot(idx(ii),r(ii).noHistGND(idx(ii)),'k*')
+    plot(idx(ii),r(ii).noHistGJD(idx(ii)),'k*')
+    
+    
+    figure(f2)
+    subplot(6,7,ii)
+    ho
+    plot(r(ii).noHistM(1:200),'g');ln2
+    plot(r(ii).noHistMND(1:200),'r');ln2
+    plot(r(ii).noHistMJD(1:200),'b');ln2
+    
+    plot(idx(ii),r(ii).noHistM(idx(ii)),'k*')
+    plot(idx(ii),r(ii).noHistMND(idx(ii)),'k*')
+    plot(idx(ii),r(ii).noHistMJD(idx(ii)),'k*')
+    title(nTitle{ii})
+    
+end
+figure(f1)
+subplot(6,7,ii+1)
+plot([0 1],[1 1],'g');ho
+plot([0 1],[2 2],'r')
+plot([0 1],[3 3],'b')
+legend({'All','No Deriv','Just Deriv'})
+title('Geometry')
+
+figure(f2)
+subplot(6,7,ii+1)
+plot([0 1],[1 1],'g');ho
+plot([0 1],[2 2],'r')
+plot([0 1],[3 3],'b')
+legend({'All','No Deriv','Just Deriv'})
+title('mechanics')
+%% compare model types
+
+f1 = figure;
+f2 = figure;
+n = fieldnames(r);
+for ii = 1:37
+    figure(f1)
+    subplot(6,7,ii)
+    plot(r(ii).generativeG(1:200),'b');ln2
+    ho
+    plot(r(ii).predictiveG(1:200),'r');ln2
+    plot(r(ii).noHistG(1:200),'g');ln2
+    
+    plot(idx(ii),r(ii).generativeG(idx(ii)),'k*')
+    plot(idx(ii),r(ii).predictiveG(idx(ii)),'k*')
+    plot(idx(ii),r(ii).noHistG(idx(ii)),'k*')
+    title(nTitle{ii})
+    
+    figure(f2)
+    subplot(6,7,ii)
+    plot(r(ii).generativeM(1:200),'b');ln2
+    ho
+    plot(r(ii).predictiveM(1:200),'r');ln2
+    plot(r(ii).noHistM(1:200),'g');ln2
+    
+    plot(idx(ii),r(ii).generativeM(idx(ii)),'k*')
+    plot(idx(ii),r(ii).predictiveM(idx(ii)),'k*')
+    plot(idx(ii),r(ii).noHistM(idx(ii)),'k*')
+    
+    title(nTitle{ii})
+end
+
+figure(f1)
+subplot(6,7,ii+1)
+plot([0 1],[1 1],'b');ho
+plot([0 1],[2 2],'r')
+plot([0 1],[3 3],'g')
+legend({'generative','predictive','noHist'})
+title('Geometry')
+
+figure(f2)
+subplot(6,7,ii+1)
+plot([0 1],[1 1],'b');ho
+plot([0 1],[2 2],'r')
+plot([0 1],[3 3],'g')
+legend({'generative','predictive','noHist'})
+title('mechanics')
+%% compare geo and mech
+toCompare = {'noHistG','noHistM'};
+color = {'g','r'};
+figure
+for ii =1:37
     subplot(6,7,ii)
     
-    plot(stdRange(1:150),r(ii).noHistG(1:150));ln2
-    axy(0,1)
-    axx(0,150)
-    title(nTitle{ii},'Interpreter','None')
-    ho
-    [gMax,gIdx] = max(r(ii).noHistG(1:150));
-    if gIdx>=150
-        gIdx = knee_pt(r(ii).noHistG(1:150));
-        gMax = r(ii).noHistG(gIdx);
+    for jj = 1:length(toCompare)
+        plot(r(ii).(toCompare{jj}),color{jj});ln2;ho
+        plot(idx(ii),r(ii).(toCompare{jj})(idx(ii)),'k*')
+        title(nTitle{ii})
+        
     end
-   % plot(gIdx,gMax,'*')
-    
-    plot(stdRange(1:150),r(ii).noHistM(1:150));ln2
-    [mMax,mIdx] = max(r(ii).noHistM(1:150));
-    if mIdx>150
-        mIdx = knee_pt(r(ii).noHistM(1:150));
-        mMax = r(ii).noHistM(mIdx);
+    for jj = 1:length(toCompare)
+        plot(idx(ii),r(ii).(toCompare{jj})(idx(ii)),'k*')
     end
-    xlabel('\sigma (ms)')
-    %ylabel('R^2')
-    %plot(mIdx,mMax,'*')
+    
+    
 end
-for ii = 1:length(r)
-    [~,sigmaStar(ii).generativeG] = max(r(ii).generativeG);
-    [~,sigmaStar(ii).generativeGND] = max(r(ii).generativeGND);
-    [~,sigmaStar(ii).generativeGJD] = max(r(ii).generativeGJD);
-    [~,sigmaStar(ii).generativeM] = max(r(ii).generativeM);
-    [~,sigmaStar(ii).generativeMND] = max(r(ii).generativeMND);
-    [~,sigmaStar(ii).generativeMJD] = max(r(ii).generativeMJD);
-    
-    [~,sigmaStar(ii).predictiveG] = max(r(ii).predictiveG);
-    [~,sigmaStar(ii).predictiveGND] = max(r(ii).predictiveGND);
-    [~,sigmaStar(ii).predictiveGJD] = max(r(ii).predictiveGJD);
-    [~,sigmaStar(ii).predictiveM] = max(r(ii).predictiveM);
-    [~,sigmaStar(ii).predictiveMND] = max(r(ii).predictiveMND);
-    [~,sigmaStar(ii).predictiveMJD] = max(r(ii).predictiveMJD);
-    
-    [~,sigmaStar(ii).noHistG] = max(r(ii).noHistG);
-    [~,sigmaStar(ii).noHistGND] = max(r(ii).noHistGND);
-    [~,sigmaStar(ii).noHistGJD] = max(r(ii).noHistGJD);
-    [~,sigmaStar(ii).noHistM] = max(r(ii).noHistM);
-    [~,sigmaStar(ii).noHistMND] = max(r(ii).noHistMND);
-    [~,sigmaStar(ii).noHistMJD] = max(r(ii).noHistMJD);
-    
-    %%
-    maxR(ii).generativeG =  max(r(ii).generativeG);
-    maxR(ii).generativeGND =  max(r(ii).generativeGND);
-    maxR(ii).generativeGJD =  max(r(ii).generativeGJD);
-    maxR(ii).generativeM =  max(r(ii).generativeM);
-    maxR(ii).generativeMND =  max(r(ii).generativeMND);
-    maxR(ii).generativeMJD =  max(r(ii).generativeMJD);
-    
-    maxR(ii).predictiveG =  max(r(ii).predictiveG);
-    maxR(ii).predictiveGND =  max(r(ii).predictiveGND);
-    maxR(ii).predictiveGJD =  max(r(ii).predictiveGJD);
-    maxR(ii).predictiveM =  max(r(ii).predictiveM);
-    maxR(ii).predictiveMND =  max(r(ii).predictiveMND);
-    maxR(ii).predictiveMJD =  max(r(ii).predictiveMJD);
-    
-    maxR(ii).noHistG =  max(r(ii).noHistG);
-    maxR(ii).noHistGND =  max(r(ii).noHistGND);
-    maxR(ii).noHistGJD =  max(r(ii).noHistGJD);
-    maxR(ii).noHistM =  max(r(ii).noHistM);
-    maxR(ii).noHistMND =  max(r(ii).noHistMND);
-    maxR(ii).noHistMJD =  max(r(ii).noHistMJD);
+
+subplot(6,7,ii+1)
+for ii = 1:length(toCompare)
+    plot([0 1],[ii ii],color{ii});ho;
 end
+legend(toCompare)
+
+%%

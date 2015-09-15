@@ -1,5 +1,5 @@
 clear;c;ca;
-D = dir('*GLM.mat');
+D = dir('*Mech.mat');
 stdRange = [1:1000];
 for ii = 1:length(D)
     tic
@@ -72,9 +72,8 @@ for ii = 1:length(D)
         trace(ii).noHistM = out_mD.Y_noHist;
         trace(ii).noHistMND = out_mND.Y_noHist;
         trace(ii).noHistMJD = out_mJD.Y_noHist;
-        spikes{ii} = smSpike;
+        spikes{ii} = out_gD.tested_spikes;
     
     
 end
-save('Summary.mat','r','stdRange','trace')
-save('SummarySpikes.mat','spikes','-v7.3')
+save('Summary.mat','r','stdRange','trace','spikes')
