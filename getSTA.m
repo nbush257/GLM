@@ -1,4 +1,4 @@
-function sta = getSTA(matrix,winSize,varargin)
+function [sta,se] = getSTA(spikes,Xin,winSize,varargin)
 %% function sta = getSTA(matrix,winSize,[spikeTypeFlag])
 % ==============================================
 % Inputs:
@@ -33,23 +33,22 @@ if length(varargin)==1
     spikeTypeFlag = varargin{1};
 end
 
-
-
-mechTitle = {'FX','FY','M'};
-geoTitle = {'R','\Theta'};
 if ~ismember(spikeTypeFlag,{'s','seh','d','deh','t','teh','q','qeh'})
     spikeTypeFlag = 's';
     disp('automatically using singlets')
 end
+if iscolumn(spikes)
+    spikes = spikes';
+end
 
-s = strfind(matrix(:,1)',1);
-seh = strfind(matrix(:,1)',[0 1 0]);seh = seh +1;
-d =strfind(matrix(:,1)',[1 1]);
-deh = strfind(matrix(:,1)',[0 1 1 0]);deh = deh+1;
-t = strfind(matrix(:,1)',[1 1 1]);
-teh = strfind(matrix(:,1)',[0 1 1 1 0]);teh = teh+1;
-q = strfind(matrix(:,1)',[1 1 1 1]);
-qeh = strfind(matrix(:,1)',[0 1 1 1 1 0]);qeh = qeh+1;
+s = strfind(spikes,1);
+seh = strfind(spikes,[0 1 0]);seh = seh +1;
+d =strfind(spikes,[1 1]);
+deh = strfind(spikes,[0 1 1 0]);deh = deh+1;
+t = strfind(spikes,[1 1 1]);
+teh = strfind(spikes,[0 1 1 1 0]);teh = teh+1;
+q = strfind(spikes,[1 1 1 1]);
+qeh = strfind(spikes,[0 1 1 1 1 0]);qeh = qeh+1;
 
 switch spikeTypeFlag
     case 's'
@@ -70,47 +69,23 @@ switch spikeTypeFlag
     case 'qeh'
         times = qeh;
 end
-
-for ii = 1:length(times)
-    trigFX(ii,:) = matrix(times(ii)-winSize:times(ii)+winSize,2);
-    trigFY(ii,:) = matrix(times(ii)-winSize:times(ii)+winSize,3);
-    trigM(ii,:) = matrix(times(ii)-winSize:times(ii)+winSize,4);
+win = [times-winSize;times+winSize]';
+if size(Xin,2)>size(Xin,1)
+    Xin = Xin';
 end
-se_trigFX = nanstd(trigFX)/sqrt(nansum(matrix(:,1)));
-se_trigFY = nanstd(trigFY)/sqrt(nansum(matrix(:,1)));
-se_trigM = nanstd(trigM)/sqrt(nansum(matrix(:,1)));
-
-trigFX = nanmean(trigFX);
-trigFY = nanmean(trigFY);
-trigM = nanmean(trigM);
-
-sta.fx = trigFX;
-sta.fx_se = se_trigFX;
-
-sta.fy = trigFY;
-sta.fy_se = se_trigFY;
-
-sta.m = trigM;
-sta.m_se = se_trigM;
+dum = [];
+for ii = 1:size(Xin,2)
+    for jj = 1:length(times)
+        dum(jj,:) = Xin(times(jj)-winSize:times(jj)+winSize,ii);
+    end
+    sta(:,ii) = nanmean(dum);
+    se(:,ii) = nanstd(dum)./sqrt(length(times));
+end
+for ii = 1:size(sta,2)
+    plot(sta(:,ii))
+    ho
+    shadedErrorBar(1:size(sta,1),sta(:,ii),se(:,ii))
+end
 
 
-%  
-% for ii = 1:size(matrix,2)-1
-%     subplot(1,size(matrix,2)-1,ii)
-%     
-%     
-%     plot(-timeLag:-1,staUD(:,ii),'-o')
-%     xlabel('ms','FontSize',16)
-%     ylabel('newtons','FontSize',16)
-%     ln3
-%     ho
-%     errorbar(-timeLag:-1,staUD(:,ii),staSTD(:,ii));
-%     if strcmp(PlotFlag,'mech')
-%         title(mechTitle{ii})
-%     elseif strcmp(PlotFlag,'geo')
-%         title(geoTitle{ii})
-%     end
-%     
-%     
-% end
-% 
+vline(winSize+1)

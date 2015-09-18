@@ -29,7 +29,7 @@ neural_word = zeros(length(timeMs),length(useCells));
 for ii = 1:length(useCells)
     neural_clip = times(useCells(ii)).times; % pick your cell
     neural_ms = timeSubSamp(neural_clip);
-    neural_word(neural_ms) = 1;
+    neural_word(neural_ms,ii) = 1;
 end
 %% Median or LULU filtering for outlier removal
 M = medfilt1(M,3);
@@ -37,7 +37,6 @@ F  =medfilt1(F,3);
 PHIE_filt = medfilt1(PHIE_filt);
 TH_filt = medfilt1(TH_filt);
 Rcp = medfilt1(Rcp);
-ZETA_filt = medfilt1(ZETA_filt);
 
 %% upsample
 for ii = 1:3
