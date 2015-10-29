@@ -1,25 +1,20 @@
 clear
 ca
 d = dir('*toGLM.mat');
-
-
-basisSize = 4;
-lastPeak = 15;
-nlOffset = 1;
-rateBin = 75;
-suffix = '_simGLM';
-saveLoc = 'done';mkdir(saveLoc)
-stimBasis = basisFactory.makeNonlinearRaisedCos(basisSize,1,[1 lastPeak],nlOffset);plot(stimBasis)
-histBasis =makeNonlinearRaisedCos_nb(2,1,0,2,1);
-subplot(211)
-plot(stimBasis.B)
-subplot(212)
-plot(histBasis.B)
+noProx = 1;
 saveTGL =1;% 1 if you want to save the outputs
-pause
-ca
-pause(.01)
-for ddd = 8:length(d)
+basisSize = 2;
+lastPeak = 6;
+nlOffset = 4;
+
+suffix = '_simGLM';
+saveLoc = 'postRev';mkdir(saveLoc)
+stimBasis = basisFactory.makeNonlinearRaisedCos(basisSize,3,[0 lastPeak],nlOffset);
+
+
+
+
+for ddd = 25%1:length(d)
     clearvars -except d ddd cellType lastPeak basisSize nlOffset rateBin histSize saveTGL suffix stimBasis histBasis saveLoc
     d = dir('*toGLM.mat');
     fname = [d(ddd).name(1:end-10) suffix];% output filename -no suffix
@@ -28,7 +23,7 @@ for ddd = 8:length(d)
         mech_85 = mech_85';
         geo_85 = geo_85';
     end
-    noProx = 1;
+    
     if sum(spikevec)<50
         continue
     end
@@ -44,9 +39,8 @@ for ddd = 8:length(d)
         dis(prox) = [];
     end
     
-    
-    [XM,dm] = buildDesignMatrix(mech_85,spikevec,'deriv',1,'hist',1,'bsStim',stimBasis,'bsSpike',histBasis);
     [XM_nh,dm_nh] = buildDesignMatrix(mech_85,spikevec,'deriv',1,'hist',0,'bsStim',stimBasis,'bsSpike',histBasis);
+    XM
     mD.X  = XM;
     mD.X_noHist = XM_nh;
     mD.dm  = dm;
