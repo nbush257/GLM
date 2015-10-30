@@ -20,6 +20,6 @@ end
 if plotTGL
     figure
     for ii = 1:numReplicates
-        plot(find(spikeOut(:,ii)==1),ones(size(find(spikeOut(:,ii)==1)))*ii,'k.');ho;
+        plot(find(history(:,ii)==1),ones(size(find(history(:,ii)==1)))*ii,'k.');ho;
     end
 end

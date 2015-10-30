@@ -73,6 +73,13 @@ win = [times-winSize;times+winSize]';
 if size(Xin,2)>size(Xin,1)
     Xin = Xin';
 end
+% 
+% fprintf('Scaling each input vector\n')
+% for ii = 1:size(Xin,2)
+%     Xin(:,ii) = scale(Xin(:,ii));
+% end
+% 
+
 dum = [];
 for ii = 1:size(Xin,2)
     for jj = 1:length(times)
@@ -82,10 +89,10 @@ for ii = 1:size(Xin,2)
     se(:,ii) = nanstd(dum)./sqrt(length(times));
 end
 for ii = 1:size(sta,2)
-    plot(sta(:,ii))
+    plot(sta(:,ii));
     ho
-    shadedErrorBar(1:size(sta,1),sta(:,ii),se(:,ii))
+%     shadedErrorBar(1:size(sta,1),sta(:,ii),se(:,ii))
 end
 
 
-vline(winSize+1)
+vline(winSize+1);
