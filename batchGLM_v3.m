@@ -3,13 +3,13 @@ ca
 d = dir('*toGLM.mat');
 noProx = 1;
 saveTGL =1;% 1 if you want to save the outputs
-basisSize = 3;
-lastPeak = 10;
+basisSize = 2;
+lastPeak = 5;
 nlOffset = 4;
 nHist = 3;
 k=5;
 
-suffix = '_scaleGLM';
+suffix = 'scaleGLM';
 saveLoc = 'postRev';mkdir(saveLoc)
 stimBasis = basisFactory.makeNonlinearRaisedCos(basisSize,3,[0 lastPeak],nlOffset);
 plot(stimBasis.B)
@@ -154,9 +154,14 @@ for ddd = 1:length(d)
     % YHAT_NOHIST{ddd} = glmval(bnh,XM_nh,'logit');
     % allXM_H{ddd} = XM_h;
     % allXM_NH{ddd} = XM_nh;
+    if ~exist('prox')
+        prox = [];
+        med = [];
+        dis = [];
+    end
     if saveTGL
         cd(saveLoc)
-        save([d(ddd).name([1:end-9]) suffix '.mat'],'bnh','stats_nh','bh','stats_h','yHat_nh','ySim','yHat_hist','Names','stimBasis')
+        save([d(ddd).name([1:end-9]) suffix '.mat'],'bnh','stats_nh','bh','stats_h','yHat_nh','ySim','yHat_hist','Names','stimBasis','spikevec','C','prox','med','dis','dm_nh')
         cd ..
     end
 end
