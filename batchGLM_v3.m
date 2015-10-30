@@ -3,10 +3,10 @@ ca
 d = dir('*toGLM.mat');
 noProx = 1;
 saveTGL =1;% 1 if you want to save the outputs
-basisSize = 2;
-lastPeak = 5;
-nlOffset = 4;
-nHist = 3;
+basisSize = 3;
+lastPeak = 9;
+nlOffset = 2;
+nHist = 4;
 k=5;
 
 suffix = 'scaleGLM';
@@ -73,11 +73,11 @@ for ddd = 1:length(d)
     
     vel = cdiff(geo_85(:,2))';
     
-    %% scaling
-    fprintf('scaling...\n')
-    mech_85 = mech_85./repmat(nanstd(mech_85),length(spikevec),1);
-    geo_85= geo_85./repmat(nanstd(geo_85),length(spikevec),1);
-    vel = vel./nanstd(vel);
+%     %% scaling
+%     fprintf('scaling...\n')
+%     mech_85 = mech_85./repmat(nanstd(mech_85),length(spikevec),1);
+%     geo_85= geo_85./repmat(nanstd(geo_85),length(spikevec),1);
+%     vel = vel./nanstd(vel);
     
     %%
     
@@ -144,12 +144,12 @@ for ddd = 1:length(d)
     ySim = simGLM4(yHat,bh(end-nHist+1:end),1000);
     yHat_nh = glmval(bnh,XM_nh,'logit');
     yHat_hist = glmval(bh,XM_h,'logit');
-    %
+    weights = buildGLM.combineWeights(dm_nh,bnh(2:end));
     % B{ddd} = bh;
     % BNH{ddd} = bnh;
     % DMNH{ddd} = dm_nh;
     % WEIGHTS{ddd} = buildGLM.combineWeights(dm_nh,bh(2:end-nHist));
-    Names = {'FX','FY','M','R','THETA','V'}
+    Names = {'FX','FY','M','R','THETA','V'};
     % YSIM{ddd} = ySim;
     % YHAT_NOHIST{ddd} = glmval(bnh,XM_nh,'logit');
     % allXM_H{ddd} = XM_h;
@@ -161,7 +161,7 @@ for ddd = 1:length(d)
     end
     if saveTGL
         cd(saveLoc)
-        save([d(ddd).name([1:end-9]) suffix '.mat'],'bnh','stats_nh','bh','stats_h','yHat_nh','ySim','yHat_hist','Names','stimBasis','spikevec','C','prox','med','dis','dm_nh')
+        save([d(ddd).name([1:end-9]) suffix '.mat'])%,'weights','bnh','stats_nh','bh','stats_h','yHat_nh','ySim','yHat_hist','Names','stimBasis','spikevec','C','prox','med','dis','dm_nh')
         cd ..
     end
 end
