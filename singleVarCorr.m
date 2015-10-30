@@ -28,11 +28,6 @@ for II = 1:length(D)
     %     rate_geo = tsmovavg(geo_85','s',binsize);rate_geo(:,isnan(rate_geo(1,:))) = [];
     rate_spike = smoothts(spikevec,'g',length(spikevec),15);%tsmovavg(spikevec,'s',binsize);rate_spike(isnan(rate_spike)) = [];
     
-    if II == 1
-        keeperMech = mech_85;
-        keeperGeo = geo_85;
-        keeperRate = rate_spike;
-    end
     starts = find(diff(C)==1)+1;
     stops = find(diff(C)==-1);
     newMech = [];newGeo = [];newSpike= [];
@@ -44,9 +39,18 @@ for II = 1:length(D)
     mech_85 = newMech;
     geo_85 = newGeo;
     rate_spike = newSpike;
+    vel = geo_85(:,2);
+    vel = cdiff(vel)';
+    vel(isnan(vel))=0;
     
+    if II == 1
+        keeperMech = mech_85;
+        keeperGeo = [geo_85 vel];
+        keeperRate = rate_spike;
+        
+    end
     tic
-    outCorr = bootstrp(500,@corr,[mech_85 geo_85],rate_spike','Options',opts);
+    outCorr = bootstrp(500,@corr,[mech_85 geo_85 vel],rate_spike','Options',opts);
     b = toc;
     fprintf('Correlations took %.4f seconds for %i ms\n',b,length(spikevec))
     Corr(II).FX = outCorr(:,1);
@@ -55,6 +59,7 @@ for II = 1:length(D)
     
     Corr(II).R = outCorr(:,4);
     Corr(II).TH = outCorr(:,5);
+    Corr(II).V = outCorr(:,6);
     %
     %     CI(II).FX = outCI(:,1);
     %     CI(II).FY = outCI(:,2);
