@@ -1,14 +1,16 @@
-% alginNeuralAnd2D
-clear
+%% alginNeuralAnd2D
+% Lots of preprocessing, then upsampling inputs.
+clear;ca
 [fName,pName] = uigetfile('*varConcat.mat','Load in the concatenated variables from E2D');
-load([pName fName]);
+
 
 oldir = pwd;
-cd C:\Users\nbush257\Documents\hartmann_lab\data\VG2D\neural\;
-[fName,pName] = uigetfile('*.mat',['Load in the sorted neural data for ' fName]);
+cd D:\data\analyzed\2015_14\
+[fName2,pName2] = uigetfile('*.mat',['Load in the sorted neural data for ' fName]);
+load([pName2 fName2]);
 load([pName fName]);
 cd(oldir);
-fOut = regexp(fName,'_t\d{2}');fOut = fName(1:fOut+3);
+fOut = regexp(fName2,'_t\d{2}');fOut = fName2(1:fOut+3);
 %% Neural data to ms
 frameCapTimes(frameCapTimes>time(length(time)))=NaN;
 timeSubSamp = floor(time*1000);
@@ -72,12 +74,14 @@ E2D_medfilt.TH = medfilt1(TH);
 fNames = fieldnames(E2D);
 for ii = 1:length(fNames)
     if ismember(fNames{ii},{'xs','ys','C'})
-        E2D_upsamp.(fNames{ii}) = E2D.(fNames{ii});
         continue
     end
     if size(E2D.(fNames{ii}),2)>1
+        tempUp = [];
+        tempUpFilt = [];
         temp = E2D.(fNames{ii});
         tempFilt = E2D_medfilt.(fNames{ii});
+        
         for jj = 1:size(temp,2)
             tempUp(:,jj) = InterpolateOverNans(temp(:,jj),20);
             tempUpFilt(:,jj) = InterpolateOverNans(tempFilt(:,jj),20);
@@ -90,6 +94,18 @@ for ii = 1:length(fNames)
     E2D_medfilt.(fNames{ii}) = InterpolateOverNans(E2D_medfilt.(fNames{ii}),20);
     E2D.(fNames{ii}) = InterpolateOverNans(E2D.(fNames{ii}),20);
 end
+%% Delete Outliers
+
+fNames = fieldnames(E2D);
+for ii = 1:length(fNames)
+    if ismember(fNames{ii},{'xs','ys','BP','CP'})
+        E2D_upsamp.(fNames{ii}) = E2D.(fNames{ii});
+        continue
+    end
+    E2D_medfilt.(fNames{ii}) = deleteoutliers(E2D_medfilt.(fNames{ii}),.001,1);
+    E2D.(fNames{ii}) = deleteoutliers(E2D.(fNames{ii}),.0001,1);
+end
+
 
 
 %% Perform Upsampling
@@ -100,8 +116,8 @@ for ii = 1:length(fNames)
         continue
     end
     
-    E2D_medfilt_upsamp.(fNames{ii}) = upsampForNeural(E2D_medfilt.(fNames{ii}),neural_word(:,1),frameCapTimes_ms,1,length(frameCapTimes),length(frameCapTimes));
-    E2D_upsamp.(fNames{ii}) = upsampForNeural(E2D.(fNames{ii}),neural_word(:,1),frameCapTimes_ms,1,length(frameCapTimes),length(frameCapTimes));
+    E2D_medfilt_upsamp.(fNames{ii}) = upsampForNeural(E2D_medfilt.(fNames{ii}),neural_word(:,1),frameCapTimes_ms,1,length(E2D.FX),length(E2D.FX));
+    E2D_upsamp.(fNames{ii}) = upsampForNeural(E2D.(fNames{ii}),neural_word(:,1),frameCapTimes_ms,1,length(E2D.FX),length(E2D.FX));
 end
 
 %% Get R
@@ -118,11 +134,11 @@ end
 R = InterpolateOverNans(R,20);
 R_noFilt = InterpolateOverNans(R_noFilt,20);
 
-R_filt_upsamp = upsampForNeural(R,neural_word(:,1),frameCapTimes_ms,1,length(frameCapTimes),length(frameCapTimes));
-R_upsamp = upsampForNeural(R_noFilt,neural_word(:,1),frameCapTimes_ms,1,length(frameCapTimes),length(frameCapTimes));
+R_filt_upsamp = upsampForNeural(R,neural_word(:,1),frameCapTimes_ms,1,length(R),length(R));
+R_upsamp = upsampForNeural(R_noFilt,neural_word(:,1),frameCapTimes_ms,1,length(R),length(R));
 
 %% Upsample the RCCR logical
-RCCR_upsamp = upsampForNeural(RCCR,neural_word(:,1),frameCapTimes_ms,1,length(frameCapTimes),length(frameCapTimes));
+RCCR_upsamp = upsampForNeural(RCCR,neural_word(:,1),frameCapTimes_ms,1,length(E2D.C),length(E2D.C));
 RCCR_upsamp(isnan(RCCR_upsamp)) = 0;
 RCCR_upsamp = logical(RCCR_upsamp);
 %% reformat into matrices with just the RCCR times
@@ -134,28 +150,34 @@ Mech.filtFX = E2D_medfilt_upsamp.FX(RCCR_upsamp);
 Mech.filtFY = E2D_medfilt_upsamp.FY(RCCR_upsamp);
 Mech.filtM = E2D_medfilt_upsamp.M(RCCR_upsamp);
 
+Mech.filtAll = [Mech.filtFX Mech.filtFY Mech.filtM];
+
 Geo.R = R_upsamp(RCCR_upsamp);
 Geo.TH = E2D_upsamp.TH(RCCR_upsamp);
 
 Geo.filtR = R_filt_upsamp(RCCR_upsamp);
 Geo.filtTH = E2D_medfilt_upsamp.TH(RCCR_upsamp);
 
+Geo.filtAll = [Geo.filtR Geo.filtTH];
+C = E2D_upsamp.C(RCCR_upsamp);
+
+
 
 
 %% Save output
 
 overwrite = 1;
-if exist([fOut '_cell1 .mat'],'file')
+if exist([fOut '_cell_1*.mat'],'file')
     overwrite = input('File found, do you want to overwrite?(1/0)')
 end
 
-[prox,med,dis] = getRadialDistanceGroup(Geo);
+% [prox,med,dis] = getRadialDistanceGroup(Geo)
 
 if overwrite
     
     for ii = 1:length(useCells)
-        spikevec = neural_word(:,ii);
+        spikevec = neural_word(RCCR_upsamp,ii);
         neuralShapes = shapes(ii).shapes;
-        save([fOut '_cell' num2str(ii) '.mat'],'Mech','Geo','spikevec')
+        save([fOut '_cell_' num2str(ii) '_toGLM.mat'],'Mech','Geo','spikevec','E2D_up)
     end
 end

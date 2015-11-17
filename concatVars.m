@@ -1,11 +1,11 @@
 %Concatenate all mechanical variables
 clear
 %choose the data to concatenate
-ratNum = '06'
+ratNum = '14'
 trialNum = 't01'
-whisker = 'C3'
+whisker = 'E2'
 % choose the frames of RCCR:
-RCCR = [40001+2620 40001+11200];
+RCCR = [1 40000+5500];
 
 % find the relevant files
 dE2D = dir(['*E2D*' ratNum '*' whisker '*' trialNum '*E2D.mat']);
@@ -39,6 +39,17 @@ for ii = 1:length(dE2D)
     
     clipStart = regexp(dE2D(ii).name,'F\d{6}');clipStart = str2num(dE2D(ii).name(clipStart(1)+1:clipStart(1)+6));
     clipEnd = regexp(dE2D(ii).name,'F\d{6}');clipEnd = str2num(dE2D(ii).name(clipEnd(2)+1:clipEnd(2)+6));
+%     if ii ==1
+%         FX =FX(1:20000);
+%         FY =FY(1:20000);
+%         M =M(1:20000);
+%         BP =BP(1:20000,:);
+%         C =C(1:20000,:);
+%         TH =TH(1:20000,:);
+%         CP =CP(1:20000,:);
+%         xs = xs(1:20000);
+%         ys = ys(1:20000);
+%     end
     
     E2D.FX(clipStart:clipEnd) = FX;
     E2D.FY(clipStart:clipEnd) = FY;
