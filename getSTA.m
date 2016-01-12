@@ -1,4 +1,6 @@
 function sta = getSTA(matrix,winSize,varargin)
+
+error('This is hardcoded and needs to be generalized')
 %% function sta = getSTA(matrix,winSize,[spikeTypeFlag])
 % ==============================================
 % Inputs:

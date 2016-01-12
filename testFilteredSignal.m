@@ -1,3 +1,5 @@
+%% this code applies filters to the stimulus trace. It is hardcoded in a way that requires inputs structured in a way that probably won't get used again.
+
 bnh = bnh;
 filters = buildGLM.combineWeights(dm_nh,bnh(2:end));
 filters = filters.X.data;
@@ -10,10 +12,13 @@ aa(aa==0) = NaN;
 
 ho
 for ii = 1:6
-
-    histogram(aa(:,ii))
+    pl(ii)=subplot(2,3,ii)
+    hist(aa(:,ii),1000)
+    title(Names{ii})
     
 end
+linkaxes(pl)
+
 legend(Names)
 figure
 bar(nanmedian(abs(aa)));ho
