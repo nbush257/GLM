@@ -2,13 +2,13 @@ clear
 ca
 d = dir('*toGLM.mat');
 noProx = 1;
-noHolds = 0;
-saveTGL =0;% 1 if you want to save the outputs
-basisSize = 4;
-lastPeak = 20;
-nlOffset = 3;
-nHist = 0;
-k=10;
+
+saveTGL =1;% 1 if you want to save the outputs
+basisSize = 3;
+lastPeak = 9;
+nlOffset = 2;
+nHist = 4;
+k=5;
 
 suffix = 'done';
 saveLoc = 'done';mkdir(saveLoc)
@@ -60,37 +60,41 @@ for ddd =31%1:length(d)
         dis(prox) = [];
     end
     cstart = find(diff(C)==1)+1;
-%     cend = find(diff(C)==-1);
-%     for iii = 1:length(cstart)
-%         
-%         tM = mech_85(cstart(iii):cend(iii),:);
-%         
-%         fM = tM(~isnan(tM(:,1)),:);
-%         %         fG = tG(~isnan(tG(:,1)),:);
-%         if ~isempty(fM)
-%             fM = fM(1,:);
-%         else
-%             fM = [NaN NaN NaN];
-%         end
-%         %         if ~isempty(fG)
-%         %             fG = fG(1,:);
-%         %         else
-%         %             fG = [NaN NaN];
-%         %         end
-%         
-%         
-%         
-%         %         geo_85(cstart(iii):cend(iii),:) = geo_85(cstart(iii):cend(iii),:)-repmat(fG,cend(iii)-cstart(iii)+1,1);
-%         mech_85(cstart(iii):cend(iii),:) = mech_85(cstart(iii):cend(iii),:)-repmat(fM,cend(iii)-cstart(iii)+1,1);
-%     end
+
+    cend = find(diff(C)==-1);
+    for iii = 1:length(cstart)
+        
+        tM = mech_85(cstart(iii):cend(iii),:);
+        
+        fM = tM(~isnan(tM(:,1)),:);
+        %         fG = tG(~isnan(tG(:,1)),:);
+        if ~isempty(fM)
+            fM = fM(1,:);
+        else
+            fM = [NaN NaN NaN];
+        end
+        %         if ~isempty(fG)
+        %             fG = fG(1,:);
+        %         else
+        %             fG = [NaN NaN];
+        %         end
+        
+        
+        
+        %         geo_85(cstart(iii):cend(iii),:) = geo_85(cstart(iii):cend(iii),:)-repmat(fG,cend(iii)-cstart(iii)+1,1);
+        mech_85(cstart(iii):cend(iii),:) = mech_85(cstart(iii):cend(iii),:)-repmat(fM,cend(iii)-cstart(iii)+1,1);
+    end
     
     
-       
-    %     %% scaling
-    %     fprintf('scaling...\n')
-    %     mech_85 = mech_85./repmat(nanstd(mech_85),length(spikevec),1);
-    %     geo_85= geo_85./repmat(nanstd(geo_85),length(spikevec),1);
-    %     vel = vel./nanstd(vel);
+    
+    vel = cdiff(geo_85(:,2))';
+    
+%     %% scaling
+%     fprintf('scaling...\n')
+%     mech_85 = mech_85./repmat(nanstd(mech_85),length(spikevec),1);
+%     geo_85= geo_85./repmat(nanstd(geo_85),length(spikevec),1);
+%     vel = vel./nanstd(vel);
+>>>>>>> 0667b38740e79b07f91c64d15bee07681ed1ced4
     
     %%
     
@@ -207,7 +211,9 @@ for ddd =31%1:length(d)
     end
     if saveTGL
         cd(saveLoc)
+
         save([d(ddd).name([1:end-9]) suffix '.mat'],'b*','B*','stats*','yHat*','Names','stimBasis','spikevec','C','prox','med','dis')
+
         cd ..
     end
 end

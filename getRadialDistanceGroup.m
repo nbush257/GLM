@@ -28,6 +28,7 @@ while but~=3 % right click exits
     X = xlim;
     Y = ylim;
     [x,~,but] = ginput(2);
+<<<<<<< HEAD
     
     if isempty(x)
         but = 3;
