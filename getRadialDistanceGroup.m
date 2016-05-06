@@ -86,8 +86,17 @@ while but~=3 % right click to exit
     
     
 end
+%% make it so we don't have overlapping groups
+% by default, make the overlap parts distal, as that was the last to be
+% determined.
+overlap = prox & dis;
+prox(overlap) = 0;
 
 %% get medial as exclusion of other distances
 prox = logical(prox);
 dis = logical(dis);
 med = ~isnan(Geo.R) & ~prox & ~dis;
+%% turn off groupings on nans.
+prox(isnan(Geo.filtR)) = 0;
+med(isnan(Geo.filtR)) = 0;
+dis(isnan(Geo.filtR)) = 0;
