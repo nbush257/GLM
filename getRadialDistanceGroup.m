@@ -100,3 +100,5 @@ med = ~isnan(Geo.R) & ~prox & ~dis;
 prox(isnan(Geo.filtR)) = 0;
 med(isnan(Geo.filtR)) = 0;
 dis(isnan(Geo.filtR)) = 0;
+%% 
+close all
