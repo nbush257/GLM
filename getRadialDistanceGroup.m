@@ -28,7 +28,6 @@ while but~=3 % right click exits
     X = xlim;
     Y = ylim;
     [x,~,but] = ginput(2);
-<<<<<<< HEAD
     
     if isempty(x)
         but = 3;
@@ -89,4 +88,6 @@ while but~=3 % right click to exit
 end
 
 %% get medial as exclusion of other distances
+prox = logical(prox);
+dis = logical(dis);
 med = ~isnan(Geo.R) & ~prox & ~dis;
