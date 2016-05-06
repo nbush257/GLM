@@ -1,14 +1,20 @@
-%Concatenate all mechanical variables
-clear
-%choose the data to concatenate
-ratNum = '14'
-trialNum = 't01'
-whisker = 'E2'
-% choose the frames of RCCR:
-RCCR = [1 40000+5500];
+
+function concatVars(ratNum,trialNum,whisker,RCCR)
+%% function concatVars(ratNum,trialNum,whisker,RCCR)
+% %Concatenate all mechanical variables
+% clear
+% %choose the data to concatenate
+% For example
+% ratNum = '15'
+% trialNum = 't01'
+% whisker = 'B1'
+% % choose the frames of RCCR:
+% RCCR = [1 60000+11800];
+%%
+
 
 % find the relevant files
-dE2D = dir(['*E2D*' ratNum '*' whisker '*' trialNum '*E2D.mat']);
+dE2D = dir(['*E2D*' ratNum '*' whisker '*' trialNum '*E2D*.mat']);
 dProc = dir(['*PROC*' ratNum '*' whisker '*' trialNum '*.mat']);
 if length(dE2D)~=length(dProc)
     error('Mismatched files')
@@ -69,7 +75,7 @@ for ii = 1:length(fNames)
         continue
     end
     
-    E2D_medfilt.(fNames{ii}) = medfilt1(E2D.(fNames{ii}));
+    E2D_medfilt.(fNames{ii}) = medfilt1(E2D.(fNames{ii}),5);
 end
 newRCCR = zeros(length(E2D.C),1);
 for ii = 1:size(RCCR,1)

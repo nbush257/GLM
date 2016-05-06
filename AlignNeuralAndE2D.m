@@ -5,8 +5,10 @@ clear;ca
 
 
 oldir = pwd;
-cd D:\data\analyzed\2015_14\
+cd C:\Users\nbush257\Desktop\Vg2D_Theta_fix\neural\
+fName
 [fName2,pName2] = uigetfile('*.mat',['Load in the sorted neural data for ' fName]);
+fName2
 load([pName2 fName2]);
 load([pName fName]);
 cd(oldir);
@@ -35,7 +37,7 @@ for ii = 1:length(useCells)
 end
 
 
-%% getTH
+%% getTH_cp
 xs = E2D.xs;
 ys = E2D.ys;
 C = E2D.C;
@@ -44,7 +46,7 @@ TH_CP = nan(size(xs));
 TH = nan(size(xs));
 
 for ii = 1:length(xs)
-    if isempty(xs{ii}) 
+    if isempty(xs{ii})
         continue
     end
     x1 = xs{ii}(1);
@@ -66,10 +68,27 @@ end
 TH(TH>nanmean(TH)+180) = TH(TH>nanmean(TH)+180)-360;
 TH(TH<nanmean(TH)-180) = TH(TH<nanmean(TH)-180)+360;
 if isrow(TH);TH = TH';end
-E2D.TH = TH;
-E2D_medfilt.TH = medfilt1(TH);
+E2D.TH_cp = TH;
+E2D_medfilt.TH_cp = medfilt1(TH);
+%% get theta deflection
+cc = convertContact(C);
+TH_d = nan(size(TH));
+for ii = 1:size(cc,1)
+    idx = cc(ii,1);
+    x1 = xs{idx}(1);
+    y1 = ys{idx}(1);
+    THbase = atan2(CP(idx,2)-y1,CP(idx,1)-x1)*180/pi;
+    for jj = 0:(cc(ii,2)-cc(ii,1))
+        x1 = xs{idx+jj}(1);
+        y1 = ys{idx+jj}(1);
+        TH_d(idx+jj) = atan2(CP(idx+jj,2)-y1,CP(idx+jj,1)-x1)*180/pi - THbase;
+    end
+end
 
-%% Interp over nangaps 
+E2D.TH_d = TH_d;
+E2D_medfilt.TH_d = medfilt1(TH_d);
+
+%% Interp over nangaps
 
 fNames = fieldnames(E2D);
 for ii = 1:length(fNames)
@@ -90,7 +109,7 @@ for ii = 1:length(fNames)
         E2D_medfilt.(fNames{ii}) = tempUpFilt;
         continue
     end
-        
+    
     E2D_medfilt.(fNames{ii}) = InterpolateOverNans(E2D_medfilt.(fNames{ii}),20);
     E2D.(fNames{ii}) = InterpolateOverNans(E2D.(fNames{ii}),20);
 end
@@ -131,6 +150,7 @@ for ii = 1:length(E2D_medfilt.xs)
     R(ii) = sqrt((E2D_medfilt.xs{ii}(1)-E2D_medfilt.CP(ii,1)).^2 + (E2D_medfilt.ys{ii}(1)-E2D_medfilt.CP(ii,2)).^2);
     R_noFilt(ii) = sqrt((E2D.xs{ii}(1)-E2D.CP(ii,1)).^2 + (E2D.ys{ii}(1)-E2D.CP(ii,2)).^2);
 end
+%%
 R = InterpolateOverNans(R,20);
 R_noFilt = InterpolateOverNans(R_noFilt,20);
 
@@ -153,12 +173,15 @@ Mech.filtM = E2D_medfilt_upsamp.M(RCCR_upsamp);
 Mech.filtAll = [Mech.filtFX Mech.filtFY Mech.filtM];
 
 Geo.R = R_upsamp(RCCR_upsamp);
-Geo.TH = E2D_upsamp.TH(RCCR_upsamp);
+Geo.TH_cp = E2D_upsamp.TH_cp(RCCR_upsamp);
+Geo.TH_d = E2D_upsamp.TH_d(RCCR_upsamp);
 
 Geo.filtR = R_filt_upsamp(RCCR_upsamp);
-Geo.filtTH = E2D_medfilt_upsamp.TH(RCCR_upsamp);
+Geo.filtTH_cp = E2D_medfilt_upsamp.TH_cp(RCCR_upsamp);
+Geo.filtTH_d = E2D_medfilt_upsamp.TH_d(RCCR_upsamp);
 
-Geo.filtAll = [Geo.filtR Geo.filtTH];
+
+Geo.filtAll = [Geo.filtR Geo.filtTH_d];
 C = E2D_upsamp.C(RCCR_upsamp);
 
 
@@ -178,6 +201,6 @@ if overwrite
     for ii = 1:length(useCells)
         spikevec = neural_word(RCCR_upsamp,ii);
         neuralShapes = shapes(ii).shapes;
-        save([fOut '_cell_' num2str(ii) '_toGLM.mat'],'Mech','Geo','spikevec','E2D_up)
+        save([fOut '_cell_' num2str(ii) '_toGLM.mat'],'Mech','Geo','spikevec','C')
     end
 end
