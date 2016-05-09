@@ -75,7 +75,7 @@ for ii = 1:length(fNames)
         continue
     end
     
-    E2D_medfilt.(fNames{ii}) = medfilt1(E2D.(fNames{ii}),5);
+    E2D_medfilt.(fNames{ii}) = medfilt1(E2D.(fNames{ii}));
 end
 newRCCR = zeros(length(E2D.C),1);
 for ii = 1:size(RCCR,1)
