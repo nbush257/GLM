@@ -49,7 +49,7 @@ if scaleTGL
     end
 end
 
-%% find events 
+%% find events
 % this may need to be refactored
 warning('Event finding should be refactored')
 s = strfind(spbool',1);
@@ -84,26 +84,27 @@ end
 triggered = zeros(winSize * 2 + 1, size(stimMat,2),length(times));
 
 for ii = 1:length(times) %loop over every spike
-    for jj = 1:size(stimMat,2) % loop over every stimulus dimension
-        
-        % if a spike is found st the window overlaps the trial start, pad
-        % the beginning with nans and get the triggered stimulus
-        if times(ii)-winSize<1
-            temp = nan(winSize * 2 + 1,1);
-            temp(end-times(ii)-winSize +1:end) = stimMat(1:(times(ii) + winSize),jj);
-            triggered(:,jj,ii) = temp;
+    
+    % if a spike is found st the window overlaps the trial start, pad
+    % the beginning with nans and get the triggered stimulus
+    if times(ii)-winSize<1
+        temp = nan(winSize * 2 + 1,size(stimMat,2));
+        temp(end-times(ii)-winSize +1:end,:) = stimMat(1:(times(ii) + winSize),:);
+        triggered(:,:,ii) = temp;
         % If a spike is found st the window overlaps the trial end, pad the
         % end with nans and get the triggered stimulus
-        elseif (times(ii)+winSize)>size(stimMat,1)
-            temp = nan(winSize * 2 + 1,1);            
-            temp(1:winSize + size(stimMat,1)-times(ii) + 1) = stimMat(times(ii) - winSize:end,jj);
-            triggered(:,jj,ii) = temp;
-        % Get the triggered stimulus.
-        else
-            triggered(:,jj,ii) = stimMat((times(ii) - winSize):(times(ii) + winSize),jj);
-        end
         
+    elseif (times(ii)+winSize)>size(stimMat,1)
+        temp = nan(winSize * 2 + 1,size(stimMat,2));
+        temp(1:winSize + size(stimMat,1)-times(ii) + 1,:) = stimMat(times(ii) - winSize:end,:);
+        triggered(:,:,ii) = temp;
+        % Get the triggered stimulus.
+        
+    else
+        triggered(:,:,ii) = stimMat((times(ii) - winSize):(times(ii) + winSize),:);
     end
+    
+    
 end
 
 %% compute mean and S.E.M. across all spikes
