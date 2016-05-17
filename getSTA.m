@@ -1,5 +1,5 @@
 function [sta,sem] = getSTA(stimMat,spbool,winSize,varargin)
-%% function [sta,sem] = getSTA(stimMat,spbool,winSize,[scaleTGL],[spikeTypeFlag])
+%% function [sta,sem] = getSTA(stimMat,spbool,winSize,[scaleTGL],[spikeOrder],[excludeHigherOrder])
 % ==============================================
 % Inputs:
 %       stimMat:
@@ -14,16 +14,15 @@ function [sta,sem] = getSTA(stimMat,spbool,winSize,varargin)
 %           average
 %       [scaleTGL]:
 %           Binary to either perform feature scaling of the inputs or not.
-%       [spikeTypeFlag]:
-%           Changes the type of spike to find the STA for.
-%           's' = singlets
-%           'seh' = singlets exclude higher order
-%           'd' = doublets
-%           'deh' = doublets exclude...
-%           't' = triplets
-%           'teh' = triplets exclude...
-%           'q' = quadruplets
-%           'qeh' = quadruplets exclude...
+%           Defaults to yes (1)
+%       [spikeOrder]:
+%           Changes the type of spike to find the STA for
+%           1 = singlets
+%           2 = doublets... Defaults to 1
+%       [excludeHigher]:
+%           binary to either exclude higher order events(1) or keep them
+%           (0). e.g. excludeHigher = 1 would find 0 1 0 as a singlet, but 0 1 1 0 as
+%           not two singlets. Defaults to 0
 % ======================================
 % Outputs:
 %       sta:
@@ -35,13 +34,13 @@ function [sta,sem] = getSTA(stimMat,spbool,winSize,varargin)
 % ========================================
 %% varargin handling
 numVargs = length(varargin);
-if numVargs > 2
+if numVargs > 3
     error('too many optional input arguments')
 end
 
-optargs = {1,'s'};
+optargs = {1,1,0};
 optargs(1:numVargs) = varargin;
-[scaleTGL,spikeTypeFlag] = optargs{:};
+[scaleTGL,spikeOrder,excludeHigher] = optargs{:};
 %% scale if desired
 if scaleTGL
     for ii = 1:size(stimMat,2)
@@ -50,36 +49,19 @@ if scaleTGL
 end
 
 %% find events
-% this may need to be refactored
-warning('Event finding should be refactored')
-s = strfind(spbool',1);
-seh = strfind(spbool',[0 1 0]);seh = seh +1;
-d =strfind(spbool',[1 1]);
-deh = strfind(spbool',[0 1 1 0]);deh = deh+1;
-t = strfind(spbool',[1 1 1]);
-teh = strfind(spbool',[0 1 1 1 0]);teh = teh+1;
-q = strfind(spbool',[1 1 1 1]);
-qeh = strfind(spbool',[0 1 1 1 1 0]);qeh = qeh+1;
-
-switch spikeTypeFlag
-    case 's'
-        times = s;
-    case 'seh'
-        
-        times = seh;
-    case 'd'
-        times = d;
-    case 'deh'
-        times = deh;
-    case 't'
-        times = t;
-    case 'teh'
-        times = teh;
-    case 'q'
-        times = q;
-    case 'qeh'
-        times = qeh;
+matchStr = ones(1,spikeOrder);
+if excludeHigher
+    matchStr = [0 matchStr 0];
 end
+times = strfind(spbool',matchStr);
+if isempty(times)
+    fprintf('No events of order %i found\n',spikeOrder)
+    sta = [];
+    sem = [];
+    return
+end
+
+
 %% Find triggered values
 triggered = zeros(winSize * 2 + 1, size(stimMat,2),length(times));
 
