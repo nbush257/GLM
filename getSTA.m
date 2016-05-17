@@ -19,6 +19,9 @@ function [sta,sem] = getSTA(stimMat,spbool,winSize,varargin)
 %           Changes the type of spike to find the STA for
 %           1 = singlets
 %           2 = doublets... Defaults to 1
+%           if you give spike order a list, it will explicitly find the
+%           pattern you give it. e.g: [0,1,0,1,0] will find all events with
+%           gaps of one ms.
 %       [excludeHigher]:
 %           binary to either exclude higher order events(1) or keep them
 %           (0). e.g. excludeHigher = 1 would find 0 1 0 as a singlet, but 0 1 1 0 as
@@ -49,17 +52,24 @@ if scaleTGL
 end
 
 %% find events
-matchStr = ones(1,spikeOrder);
-if excludeHigher
-    matchStr = [0 matchStr 0];
+if length(spikeOrder)>1
+    matchStr = spikeOrder;
+else
+    
+    matchStr = ones(1,spikeOrder);
+    if excludeHigher
+        matchStr = [0 matchStr 0];
+    end
+    times = strfind(spbool',matchStr);
 end
-times = strfind(spbool',matchStr);
+%% exit function if there are no events found
 if isempty(times)
     fprintf('No events of order %i found\n',spikeOrder)
     sta = [];
     sem = [];
     return
 end
+
 
 
 %% Find triggered values
