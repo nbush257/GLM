@@ -1,17 +1,19 @@
-function sta = getSTA(matrix,winSize,varargin)
-
-error('This is hardcoded and needs to be generalized')
-%% function sta = getSTA(matrix,winSize,[spikeTypeFlag])
+function [sta,sem] = getSTA(stimMat,spbool,winSize,varargin)
+%% function [sta,sem] = getSTA(stimMat,spbool,winSize,[scaleTGL],[spikeTypeFlag])
 % ==============================================
 % Inputs:
-%       matrix:
-%           is an N x 4 matrix where N is the number of time points (each being 1
-%           ms). The first column is the binary spike train, the remaining
-%           columns are FX,FY,M respectively
-%     
+%       stimMat:
+%           is an N x M matrix where N is the number of time points (each being 1
+%           ms). Each column is a stimulus to compute the STA for.
+%       spbool:
+%           N x 1 vector of zeros or ones where each row is a timepoint
+%           (correspoding to stimMat) and a one indicates that a spike
+%           occured at that time.
 %       winSize:
 %           the number of milliseconds before and after the spike to
 %           average
+%       [scaleTGL]:
+%           Binary to either perform feature scaling of the inputs or not.
 %       [spikeTypeFlag]:
 %           Changes the type of spike to find the STA for.
 %           's' = singlets
@@ -24,34 +26,40 @@ error('This is hardcoded and needs to be generalized')
 %           'qeh' = quadruplets exclude...
 % ======================================
 % Outputs:
-%       trigFX: the STA of FX (the second column of the input matrix)
-%       trigFY: the STA of FY (the third column of the input matrix)
-%       trigM: the STA of M (the fourth column of the input matrix)
+%       sta:
+%           a 2(winSize)+1 x M matrix of the spike triggered average for
+%           all stimulus dimensions
+%       sem:
+%           a 2(winSize)+1 x M matrix of the SEM of the spike triggered average for
+%           all stimulus dimensions
 % ========================================
-% Error bars are standard error of the mean
-
-spikeTypeFlag = '';
-if length(varargin)==1
-    spikeTypeFlag = varargin{1};
+%% varargin handling
+numVargs = length(varargin);
+if numVargs > 2
+    error('too many optional input arguments')
 end
 
-
-
-mechTitle = {'FX','FY','M'};
-geoTitle = {'R','\Theta'};
-if ~ismember(spikeTypeFlag,{'s','seh','d','deh','t','teh','q','qeh'})
-    spikeTypeFlag = 's';
-    disp('automatically using singlets')
+optargs = {1,'s'};
+optargs(1:numVargs) = varargin;
+[scaleTGL,spikeTypeFlag] = optargs{:};
+%% scale if desired
+if scaleTGL
+    for ii = 1:size(stimMat,2)
+        stimMat(:,ii) = (stimMat(:,ii)-nanmean(stimMat(:,ii)))./(nanstd(stimMat(:,ii)));
+    end
 end
 
-s = strfind(matrix(:,1)',1);
-seh = strfind(matrix(:,1)',[0 1 0]);seh = seh +1;
-d =strfind(matrix(:,1)',[1 1]);
-deh = strfind(matrix(:,1)',[0 1 1 0]);deh = deh+1;
-t = strfind(matrix(:,1)',[1 1 1]);
-teh = strfind(matrix(:,1)',[0 1 1 1 0]);teh = teh+1;
-q = strfind(matrix(:,1)',[1 1 1 1]);
-qeh = strfind(matrix(:,1)',[0 1 1 1 1 0]);qeh = qeh+1;
+%% find events 
+% this may need to be refactored
+warning('Event finding should be refactored')
+s = strfind(spbool',1);
+seh = strfind(spbool',[0 1 0]);seh = seh +1;
+d =strfind(spbool',[1 1]);
+deh = strfind(spbool',[0 1 1 0]);deh = deh+1;
+t = strfind(spbool',[1 1 1]);
+teh = strfind(spbool',[0 1 1 1 0]);teh = teh+1;
+q = strfind(spbool',[1 1 1 1]);
+qeh = strfind(spbool',[0 1 1 1 1 0]);qeh = qeh+1;
 
 switch spikeTypeFlag
     case 's'
@@ -72,47 +80,32 @@ switch spikeTypeFlag
     case 'qeh'
         times = qeh;
 end
+%% Find triggered values
+triggered = zeros(winSize * 2 + 1, size(stimMat,2),length(times));
 
-for ii = 1:length(times)
-    trigFX(ii,:) = matrix(times(ii)-winSize:times(ii)+winSize,2);
-    trigFY(ii,:) = matrix(times(ii)-winSize:times(ii)+winSize,3);
-    trigM(ii,:) = matrix(times(ii)-winSize:times(ii)+winSize,4);
+for ii = 1:length(times) %loop over every spike
+    for jj = 1:size(stimMat,2) % loop over every stimulus dimension
+        
+        % if a spike is found st the window overlaps the trial start, pad
+        % the beginning with nans and get the triggered stimulus
+        if times(ii)-winSize<1
+            temp = nan(winSize * 2 + 1,1);
+            temp(end-times(ii)-winSize +1:end) = stimMat(1:(times(ii) + winSize),jj);
+            triggered(:,jj,ii) = temp;
+        % If a spike is found st the window overlaps the trial end, pad the
+        % end with nans and get the triggered stimulus
+        elseif (times(ii)+winSize)>size(stimMat,1)
+            temp = nan(winSize * 2 + 1,1);            
+            temp(1:winSize + size(stimMat,1)-times(ii) + 1) = stimMat(times(ii) - winSize:end,jj);
+            triggered(:,jj,ii) = temp;
+        % Get the triggered stimulus.
+        else
+            triggered(:,jj,ii) = stimMat((times(ii) - winSize):(times(ii) + winSize),jj);
+        end
+        
+    end
 end
-se_trigFX = nanstd(trigFX)/sqrt(nansum(matrix(:,1)));
-se_trigFY = nanstd(trigFY)/sqrt(nansum(matrix(:,1)));
-se_trigM = nanstd(trigM)/sqrt(nansum(matrix(:,1)));
 
-trigFX = nanmean(trigFX);
-trigFY = nanmean(trigFY);
-trigM = nanmean(trigM);
-
-sta.fx = trigFX;
-sta.fx_se = se_trigFX;
-
-sta.fy = trigFY;
-sta.fy_se = se_trigFY;
-
-sta.m = trigM;
-sta.m_se = se_trigM;
-
-
-%  
-% for ii = 1:size(matrix,2)-1
-%     subplot(1,size(matrix,2)-1,ii)
-%     
-%     
-%     plot(-timeLag:-1,staUD(:,ii),'-o')
-%     xlabel('ms','FontSize',16)
-%     ylabel('newtons','FontSize',16)
-%     ln3
-%     ho
-%     errorbar(-timeLag:-1,staUD(:,ii),staSTD(:,ii));
-%     if strcmp(PlotFlag,'mech')
-%         title(mechTitle{ii})
-%     elseif strcmp(PlotFlag,'geo')
-%         title(geoTitle{ii})
-%     end
-%     
-%     
-% end
-% 
+%% compute mean and S.E.M. across all spikes
+sta = nanmean(triggered,3);
+sem = nanstd(triggered,0,3)./sqrt(length(times));
