@@ -1,32 +1,44 @@
 %% alginNeuralAnd2D
-% Lots of preprocessing, then upsampling inputs.
-clear;ca
-[fName,pName] = uigetfile('*varConcat.mat','Load in the concatenated variables from E2D');
+% % Lots of preprocessing, then upsampling inputs.
+% clear;ca
+% [fName,pName] = uigetfile('*varConcat.mat','Load in the concatenated variables from E2D');
+%
+%
+% oldir = pwd;
+% cd P:\toGLM_V4\thetaFix\neural
+% fName
+% [fName2,pName2] = uigetfile('*.mat',['Load in the sorted neural data for ' fName]);
+% fName2
+% load([pName2 fName2]);
+% load([pName fName]);
+% cd(oldir);
+% fOut = regexp(fName2,'_t\d{2}');fOut = fName2(1:fOut+3);
 
-
-oldir = pwd;
-cd C:\Users\nbush257\Desktop\Vg2D_Theta_fix\neural\
-fName
-[fName2,pName2] = uigetfile('*.mat',['Load in the sorted neural data for ' fName]);
-fName2
-load([pName2 fName2]);
-load([pName fName]);
-cd(oldir);
+function AlignNeuralAndE2D(fName,fName2,useCells)
+plotTGL = 0;
+times = [];
+load(fName)
+load(fName2)
 fOut = regexp(fName2,'_t\d{2}');fOut = fName2(1:fOut+3);
 %% Neural data to ms
 frameCapTimes(frameCapTimes>time(length(time)))=NaN;
 timeSubSamp = floor(time*1000);
 timeMs = 1:timeSubSamp(end);
 frameCapTimes_ms = frameCapTimes*1000;
-figure
-for ii = 1:length(shapes)
-    subplot(1,length(shapes),ii)
-    plot(shapes(ii).shapes','k')
-    title(num2str(ii))
-    axy(-150,150)
+if plotTGL
+    figure
+    for ii = 1:length(shapes)
+        subplot(1,length(shapes),ii)
+        plot(shapes(ii).shapes','k')
+        title(num2str(ii))
+        axy(-150,150)
+    end
+end
+% useCells = input('Which cells do you want to use?');
+if length(useCells) ==0
+    useCells = 1:length(times);
 end
 
-useCells = input('Which cells do you want to use?');
 neural_clip = [];
 neural_ms = [];
 neural_word = zeros(length(timeMs),length(useCells));
@@ -37,57 +49,141 @@ for ii = 1:length(useCells)
 end
 
 
-%% getTH_cp
+%% make vars easier to access
 xs = E2D.xs;
 ys = E2D.ys;
 C = E2D.C;
 CP = E2D.CP;
 TH_CP = nan(size(xs));
 TH = nan(size(xs));
-
+%% Clean C variable
+% if the whisker is not at least 10 nodes long, call it non-contact
+% for ii = 1:length(xs)
+%     if length(xs{ii})<10
+%         C(ii) = 0;
+%     end
+% end
+%% getTH_cp
 for ii = 1:length(xs)
-    if isempty(xs{ii})
-        continue
-    end
-    x1 = xs{ii}(1);
-    y1 = ys{ii}(1);
-    l = length(xs{ii});
-    if round(l/10)==0
-        continue
-    end
-    ye = ys{ii}(round(l/10));
-    xe = xs{ii}(round(l/10));
-    
-    TH_linear(ii) = atan2(ye-y1,xe-x1)*180/pi;
     if C(ii)
+            if isempty(xs{ii})
+                continue
+            end
+        x1 = xs{ii}(1);
+        y1 = ys{ii}(1);
+        
+        l = length(xs{ii});
+            if round(l/10)==0
+                continue
+            end
+        
+        %possible linear fit to this section of the whisker.
+        ye = ys{ii}(round(l/10));
+        xe = xs{ii}(round(l/10));
+        
+        TH_linear(ii) = atan2(ye-y1,xe-x1)*180/pi;
+        
         TH_CP(ii) = atan2(CP(ii,2)-y1,CP(ii,1)-x1)*180/pi;
+        
         TH(ii) = TH_CP(ii)-TH_linear(ii);
     end
 end
 
-TH(TH>nanmean(TH)+180) = TH(TH>nanmean(TH)+180)-360;
-TH(TH<nanmean(TH)-180) = TH(TH<nanmean(TH)-180)+360;
+% wrap
+TH(TH>nanmedian(TH)+180) = TH(TH>nanmedian(TH)+180)-360;
+TH(TH<nanmedian(TH)-180) = TH(TH<nanmedian(TH)-180)+360;
+% output
 if isrow(TH);TH = TH';end
 E2D.TH_cp = TH;
 E2D_medfilt.TH_cp = medfilt1(TH);
 %% get theta deflection
 cc = convertContact(C);
 TH_d = nan(size(TH));
+TH_d_alt =nan(size(TH));
 for ii = 1:size(cc,1)
     idx = cc(ii,1);
+    
     x1 = xs{idx}(1);
     y1 = ys{idx}(1);
-    THbase = atan2(CP(idx,2)-y1,CP(idx,1)-x1)*180/pi;
+    % calculate angle between Contact point and basepoint at first point of
+    % contact.
+    TH_tc = atan2(CP(idx,2)-y1,CP(idx,1)-x1)*180/pi;
     for jj = 0:(cc(ii,2)-cc(ii,1))
         x1 = xs{idx+jj}(1);
         y1 = ys{idx+jj}(1);
-        TH_d(idx+jj) = atan2(CP(idx+jj,2)-y1,CP(idx+jj,1)-x1)*180/pi - THbase;
+        TH_d(idx+jj) = atan2(CP(idx+jj,2)-y1,CP(idx+jj,1)-x1)*180/pi - TH_tc;
     end
+    
+    
 end
+
+% wrap
+TH_d(TH_d>nanmean(TH_d)+180) = TH_d(TH_d>nanmean(TH_d)+180)-360;
+TH_d(TH_d<nanmean(TH_d)-180) = TH_d(TH_d<nanmean(TH_d)-180)+360;
 
 E2D.TH_d = TH_d;
 E2D_medfilt.TH_d = medfilt1(TH_d);
 
+% %% get delta theta cp
+% TH_dcp = nan(size(TH));
+% for ii = 1:size(cc,1);
+%     idx = cc(ii,1);
+%
+%     % get basepoint at initial contact time
+%     x1 = xs{idx}(1);
+%     y1 = ys{idx}(1);
+%
+%     % get linear segment theta at initial contact time
+%     l = length(xs{idx});
+%     %
+%     %     if round(l/10)==0
+%     %         continue
+%     %     end
+%     ye = ys{idx}(round(l/10));
+%     xe = xs{idx}(round(l/10));
+%     TH_linear = atan2(ye-y1,xe-x1)*180/pi;
+%
+%     % subtract world contact point angle from linear base angle.
+%     TH_CP_contactStart = atan2(CP(idx,2)-y1,CP(idx,1)-x1)* 180/pi - TH_linear;
+%
+%     for jj = 0:(cc(ii,2)-cc(ii,1))
+%
+%         % get basepoint of whisker at each time of contact
+%         x1 = xs{idx+jj}(1);
+%         y1 = ys{idx+jj}(1);
+%
+%         % get linear segment theta at initial contact time
+%         l = length(xs{idx});
+%         ye = ys{idx+jj}(round(l/10));
+%         xe = xs{idx+jj}(round(l/10));
+%
+%         TH_linear = atan2(ye-y1,xe-x1)*180/pi;
+%
+%         % subtract world contact point angle from linear base angle at all
+%         % times, then subtract from world angle at start of contact.
+%         TH_dcp(idx+jj) = atan2(CP(idx+jj,2)-y1, CP(idx+jj,1)-x1)*180/pi - TH_linear - TH_CP_contactStart;
+%
+%     end
+% end
+%
+% % wrap
+% TH_dcp(TH_dcp>nanmean(TH_dcp)+180) = TH_dcp(TH_dcp>nanmean(TH_dcp)+180)-360;
+% TH_dcp(TH_dcp<nanmean(TH_dcp)-180) = TH_dcp(TH_dcp<nanmean(TH_dcp)-180)+360;
+% % output
+% E2D.TH_dcp = TH_dcp;
+% E2D_medfilt.TH_dcp = medfilt1(TH_dcp);
+%% alternate delta theta cp
+TH_dcp = nan(size(TH));
+for ii = 1:size(cc,1)
+    TH_dcp(cc(ii,1):cc(ii,2)) = TH(cc(ii,1):cc(ii,2)) - TH(cc(ii,1));
+end
+
+% wrap
+TH_dcp(TH_dcp>nanmean(TH_dcp)+180) = TH_dcp(TH_dcp>nanmean(TH_dcp)+180)-360;
+TH_dcp(TH_dcp<nanmean(TH_dcp)-180) = TH_dcp(TH_dcp<nanmean(TH_dcp)-180)+360;
+% output
+E2D.TH_dcp = TH_dcp;
+E2D_medfilt.TH_dcp = medfilt1(TH_dcp);
 %% Interp over nangaps
 
 fNames = fieldnames(E2D);
@@ -121,8 +217,10 @@ for ii = 1:length(fNames)
         E2D_upsamp.(fNames{ii}) = E2D.(fNames{ii});
         continue
     end
-    E2D_medfilt.(fNames{ii}) = deleteoutliers(E2D_medfilt.(fNames{ii}),.001,1);
-    E2D.(fNames{ii}) = deleteoutliers(E2D.(fNames{ii}),.0001,1);
+
+        E2D_medfilt.(fNames{ii}) = deleteoutliers(E2D_medfilt.(fNames{ii}),.001,1);
+        
+        E2D.(fNames{ii}) = deleteoutliers(E2D.(fNames{ii}),.0001,1);
 end
 
 
@@ -175,10 +273,13 @@ Mech.filtAll = [Mech.filtFX Mech.filtFY Mech.filtM];
 Geo.R = R_upsamp(RCCR_upsamp);
 Geo.TH_cp = E2D_upsamp.TH_cp(RCCR_upsamp);
 Geo.TH_d = E2D_upsamp.TH_d(RCCR_upsamp);
+Geo.TH_dcp = E2D_upsamp.TH_dcp(RCCR_upsamp);
+
 
 Geo.filtR = R_filt_upsamp(RCCR_upsamp);
 Geo.filtTH_cp = E2D_medfilt_upsamp.TH_cp(RCCR_upsamp);
 Geo.filtTH_d = E2D_medfilt_upsamp.TH_d(RCCR_upsamp);
+Geo.filtTH_dcp = E2D_medfilt_upsamp.TH_dcp(RCCR_upsamp);
 
 
 Geo.filtAll = [Geo.filtR Geo.filtTH_d];
