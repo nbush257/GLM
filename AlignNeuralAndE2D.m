@@ -16,6 +16,7 @@
 
 function AlignNeuralAndE2D(fName,fName2,useCells)
 plotTGL = 0;
+cInterpWin = 20;
 times = [];
 load(fName)
 load(fName2)
@@ -57,12 +58,11 @@ CP = E2D.CP;
 TH_CP = nan(size(xs));
 TH = nan(size(xs));
 %% Clean C variable
-% if the whisker is not at least 10 nodes long, call it non-contact
-% for ii = 1:length(xs)
-%     if length(xs{ii})<10
-%         C(ii) = 0;
-%     end
-% end
+tempC = C;
+tempC(tempC==0) = nan;
+C = InterpolateOverNans(tempC,cInterpWin);
+C(isnan(C)) = 0;
+
 %% getTH_cp
 for ii = 1:length(xs)
     if C(ii)
@@ -101,7 +101,11 @@ cc = convertContact(C);
 TH_d = nan(size(TH));
 TH_d_alt =nan(size(TH));
 for ii = 1:size(cc,1)
+    
     idx = cc(ii,1);
+    while length(xs{idx})<1
+        idx = idx+1;
+    end
     
     x1 = xs{idx}(1);
     y1 = ys{idx}(1);
@@ -109,6 +113,10 @@ for ii = 1:size(cc,1)
     % contact.
     TH_tc = atan2(CP(idx,2)-y1,CP(idx,1)-x1)*180/pi;
     for jj = 0:(cc(ii,2)-cc(ii,1))
+        if length(xs{idx+jj})<1
+            TH_d(idx+jj) = nan;
+            continue
+        end
         x1 = xs{idx+jj}(1);
         y1 = ys{idx+jj}(1);
         TH_d(idx+jj) = atan2(CP(idx+jj,2)-y1,CP(idx+jj,1)-x1)*180/pi - TH_tc;
@@ -124,58 +132,16 @@ TH_d(TH_d<nanmean(TH_d)-180) = TH_d(TH_d<nanmean(TH_d)-180)+360;
 E2D.TH_d = TH_d;
 E2D_medfilt.TH_d = medfilt1(TH_d);
 
-% %% get delta theta cp
-% TH_dcp = nan(size(TH));
-% for ii = 1:size(cc,1);
-%     idx = cc(ii,1);
-%
-%     % get basepoint at initial contact time
-%     x1 = xs{idx}(1);
-%     y1 = ys{idx}(1);
-%
-%     % get linear segment theta at initial contact time
-%     l = length(xs{idx});
-%     %
-%     %     if round(l/10)==0
-%     %         continue
-%     %     end
-%     ye = ys{idx}(round(l/10));
-%     xe = xs{idx}(round(l/10));
-%     TH_linear = atan2(ye-y1,xe-x1)*180/pi;
-%
-%     % subtract world contact point angle from linear base angle.
-%     TH_CP_contactStart = atan2(CP(idx,2)-y1,CP(idx,1)-x1)* 180/pi - TH_linear;
-%
-%     for jj = 0:(cc(ii,2)-cc(ii,1))
-%
-%         % get basepoint of whisker at each time of contact
-%         x1 = xs{idx+jj}(1);
-%         y1 = ys{idx+jj}(1);
-%
-%         % get linear segment theta at initial contact time
-%         l = length(xs{idx});
-%         ye = ys{idx+jj}(round(l/10));
-%         xe = xs{idx+jj}(round(l/10));
-%
-%         TH_linear = atan2(ye-y1,xe-x1)*180/pi;
-%
-%         % subtract world contact point angle from linear base angle at all
-%         % times, then subtract from world angle at start of contact.
-%         TH_dcp(idx+jj) = atan2(CP(idx+jj,2)-y1, CP(idx+jj,1)-x1)*180/pi - TH_linear - TH_CP_contactStart;
-%
-%     end
-% end
-%
-% % wrap
-% TH_dcp(TH_dcp>nanmean(TH_dcp)+180) = TH_dcp(TH_dcp>nanmean(TH_dcp)+180)-360;
-% TH_dcp(TH_dcp<nanmean(TH_dcp)-180) = TH_dcp(TH_dcp<nanmean(TH_dcp)-180)+360;
-% % output
-% E2D.TH_dcp = TH_dcp;
-% E2D_medfilt.TH_dcp = medfilt1(TH_dcp);
-%% alternate delta theta cp
+
+%% delta theta cp
 TH_dcp = nan(size(TH));
 for ii = 1:size(cc,1)
-    TH_dcp(cc(ii,1):cc(ii,2)) = TH(cc(ii,1):cc(ii,2)) - TH(cc(ii,1));
+    idx = cc(ii,1);
+    while isnan(TH(idx))
+        idx = idx+1;
+    end
+        
+    TH_dcp(idx:cc(ii,2)) = TH(idx:cc(ii,2)) - TH(idx,1);
 end
 
 % wrap
