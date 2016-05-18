@@ -62,20 +62,20 @@ tempC = C;
 tempC(tempC==0) = nan;
 C = InterpolateOverNans(tempC,cInterpWin);
 C(isnan(C)) = 0;
-
+E2D.C = logical(C);
 %% getTH_cp
 for ii = 1:length(xs)
     if C(ii)
-            if isempty(xs{ii})
-                continue
-            end
+        if isempty(xs{ii})
+            continue
+        end
         x1 = xs{ii}(1);
         y1 = ys{ii}(1);
         
         l = length(xs{ii});
-            if round(l/10)==0
-                continue
-            end
+        if round(l/10)==0
+            continue
+        end
         
         %possible linear fit to this section of the whisker.
         ye = ys{ii}(round(l/10));
@@ -103,8 +103,12 @@ TH_d_alt =nan(size(TH));
 for ii = 1:size(cc,1)
     
     idx = cc(ii,1);
-    while length(xs{idx})<1
+    
+    while isnan(TH(idx))
         idx = idx+1;
+        if idx>=cc(ii,2) | idx >= length(TH)
+            break
+        end
     end
     
     x1 = xs{idx}(1);
@@ -137,10 +141,17 @@ E2D_medfilt.TH_d = medfilt1(TH_d);
 TH_dcp = nan(size(TH));
 for ii = 1:size(cc,1)
     idx = cc(ii,1);
+    
+    
+    
     while isnan(TH(idx))
         idx = idx+1;
+        if idx>cc(ii,2) | idx > length(TH)
+            break
+        end
     end
-        
+    
+    
     TH_dcp(idx:cc(ii,2)) = TH(idx:cc(ii,2)) - TH(idx,1);
 end
 
@@ -154,7 +165,7 @@ E2D_medfilt.TH_dcp = medfilt1(TH_dcp);
 
 fNames = fieldnames(E2D);
 for ii = 1:length(fNames)
-    if ismember(fNames{ii},{'xs','ys','C'})
+    if ismember(fNames{ii},{'xs','ys','C','TH'})
         continue
     end
     if size(E2D.(fNames{ii}),2)>1
@@ -179,14 +190,14 @@ end
 
 fNames = fieldnames(E2D);
 for ii = 1:length(fNames)
-    if ismember(fNames{ii},{'xs','ys','BP','CP'})
+    if ismember(fNames{ii},{'xs','ys','BP','CP','TH','C'})
         E2D_upsamp.(fNames{ii}) = E2D.(fNames{ii});
         continue
     end
-
-        E2D_medfilt.(fNames{ii}) = deleteoutliers(E2D_medfilt.(fNames{ii}),.001,1);
-        
-        E2D.(fNames{ii}) = deleteoutliers(E2D.(fNames{ii}),.0001,1);
+    
+    E2D_medfilt.(fNames{ii}) = deleteoutliers(E2D_medfilt.(fNames{ii}),.001,1);
+    
+    E2D.(fNames{ii}) = deleteoutliers(E2D.(fNames{ii}),.0001,1);
 end
 
 
@@ -194,7 +205,7 @@ end
 %% Perform Upsampling
 fNames = fieldnames(E2D);
 for ii = 1:length(fNames)
-    if ismember(fNames{ii},{'xs','ys'})
+    if ismember(fNames{ii},{'xs','ys','BP'})
         E2D_upsamp.(fNames{ii}) = E2D.(fNames{ii});
         continue
     end
