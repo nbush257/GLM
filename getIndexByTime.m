@@ -1,4 +1,9 @@
 function x_idx = getIndexByTime(x,time)
+%% function x_idx = getIndexByTime(x,time)
+% ======================================
+% this function was ripped from the matlab exchange. It is used to map a
+% stimulus vecotr onto a time vector that may not be the same length.
+%% 
 a = x;clear x
 b = time;clear time
 if ~isrow(a);a = a';end

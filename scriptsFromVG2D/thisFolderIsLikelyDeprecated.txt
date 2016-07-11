@@ -1,0 +1,5 @@
+I'm trying to clean up my code, but don't want to dwelete code that might have been used in the VG2DF eLife publication. I'm putting scripts that are ugly/probably unuseable in this folder. 
+
+If at any point in time I want to see what I did, I will look here. Unfortunately, I wrote most of this code before I knew what I was doing, and it is in bad bad shape. 
+
+-NEB 2016_07_11
