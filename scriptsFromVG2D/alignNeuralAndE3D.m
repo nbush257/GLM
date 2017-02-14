@@ -1,4 +1,5 @@
 function alignNeuralAndE3D
+warning('This function is probably depricated!!')
 [fName,pName] = uigetfile('*.mat','Load in the E3D data');
 load([pName fName])
 if any(strfind(fName,'E3D'))
