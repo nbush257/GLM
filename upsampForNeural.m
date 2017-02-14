@@ -2,12 +2,23 @@ function x_upsamp = upsampForNeural(x,y,framesamps,varargin)
 %% function x_upsamp = upsampForNeural(x,y,framesamps,[win_size])
 % this allows you to upsample a vector x to fit another vector y (used for
 % comparing mechanics to neural)
+% INPUTS:       x - Mechanics matrix 
+%               y - boolean vector of spikes sampled at acquisition
+%                   sampling rate
+%               framesamps - indices of trigger onsets for each frame in
+%                  acquisition samples
+%               [win_size] - a window over which to interpolate nans. Should
+%               be at least greater than the inter-frame interval (in
+%               samples) Default = 2*interframe interval
+% 
+% OUTPUTS:      x_upsamp - upsampled mechanics matrix
+% NEB 2017_02_14
 %% get interpolation window
-if nargin == 0
+if nargin == 3
     inter_frame_interval = max(diff(framesamps));
     assert(inter_frame_interval<500,'The interframe interval is too large, something must be wrong')
     win_size = ceil(inter_frame_interval*2);
-elseif nargin == 1
+elseif nargin == 4
     win_size = varargin{1};
 else
     error('Too many arguments')
