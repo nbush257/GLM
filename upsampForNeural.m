@@ -16,7 +16,7 @@ function x_upsamp = upsampForNeural(x,y,framesamps,varargin)
 %% get interpolation window
 if nargin == 3
     inter_frame_interval = max(diff(framesamps));
-    assert(inter_frame_interval<500,'The interframe interval is too large, something must be wrong')
+    assert(inter_frame_interval<1000,'The interframe interval is too large, something must be wrong')
     win_size = ceil(inter_frame_interval*2);
 elseif nargin == 4
     win_size = varargin{1};
@@ -37,9 +37,9 @@ x_upsamp = nan(size(y,1),size(x,2));
 
 % removes the first frame sample indicator in the case that the first sampl
 % looks like a frame
-if framesamps(1) == 1
-    framesamps(1) = [];
-end
+% if framesamps(1) == 1
+%     framesamps(1) = [];
+% end
 assert(length(x) == length(framesamps),'Number of captured frames is not the same as the number of stimulus samples.')
 
 
